@@ -27,6 +27,8 @@ struct OnboardingView: View {
     @State private var includeAdjacentIndustries = true
     @State private var hydratedMemberID: UUID?
     @State private var isChoosingResume = false
+    @State private var showResumeImportFlow = false
+    @State private var didUseResumeDraft = false
 
     private let totalSteps = 7
     private let experienceOptions = ["1–3 years", "4–6 years", "7–9 years", "10–15 years", "15+ years"]
@@ -52,6 +54,7 @@ struct OnboardingView: View {
         let argument = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("--onboarding-step=") }
         let value = argument?.split(separator: "=").last.flatMap { Int($0) } ?? 0
         _step = State(initialValue: min(max(value, 0), 7))
+        _showResumeImportFlow = State(initialValue: ProcessInfo.processInfo.arguments.contains("--resume-review-preview"))
         #endif
     }
 
@@ -76,8 +79,26 @@ struct OnboardingView: View {
             Task {
                 let hasAccess = fileURL.startAccessingSecurityScopedResource()
                 defer { if hasAccess { fileURL.stopAccessingSecurityScopedResource() } }
+                showResumeImportFlow = true
                 await store.processResume(fileURL: fileURL)
             }
+        }
+        .fullScreenCover(isPresented: $showResumeImportFlow) {
+            ResumeImportFlowView(
+                onApply: { suggestions in
+                    useResumeDraft(suggestions)
+                    showResumeImportFlow = false
+                },
+                onContinueManually: { showResumeImportFlow = false },
+                onChooseAnother: {
+                    showResumeImportFlow = false
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        isChoosingResume = true
+                    }
+                }
+            )
+            .environmentObject(store)
         }
     }
 
@@ -183,7 +204,7 @@ struct OnboardingView: View {
                 if !suggestions.summary.isEmpty {
                     Text(suggestions.summary).font(.subheadline).foregroundStyle(NTColor.textSecondary)
                 }
-                Button("Use draft and review") { useResumeDraft(suggestions) }
+                Button("Review résumé draft") { showResumeImportFlow = true }
                     .buttonStyle(NTPrimaryButtonStyle())
             case .applied:
                 Label("Draft added—continue to review it", systemImage: "checkmark.circle.fill")
@@ -212,6 +233,9 @@ struct OnboardingView: View {
     private var identity: some View {
         VStack(alignment: .leading, spacing: NTSpacing.xl) {
             onboardingTitle("Set your professional foundation", "Use the identity you’d naturally give when meeting a peer for coffee.")
+            if didUseResumeDraft {
+                NTPrivacyNote(text: "Prefilled from your résumé. Only correct anything that does not look right.")
+            }
             NTFormField(title: "Full name", prompt: "Your real name", text: $name, contentType: .name)
             NTFormField(title: "Current role", prompt: "e.g. Engineering Director", text: $role, contentType: .jobTitle)
             VStack(alignment: .leading, spacing: NTSpacing.xs) {
@@ -241,6 +265,9 @@ struct OnboardingView: View {
     private var workContext: some View {
         VStack(alignment: .leading, spacing: NTSpacing.xl) {
             onboardingTitle("Describe the work behind your title", "A title alone rarely explains why two people should meet. Give enough context to understand your scope—without sharing confidential details.")
+            if didUseResumeDraft {
+                NTPrivacyNote(text: "Résumé details are a draft. Review them for accuracy and remove confidential context.")
+            }
             NTGuidanceCard(
                 title: "Useful context sounds like",
                 text: "Leads a 28-person platform organization across reliability, developer experience, and core services."
@@ -282,6 +309,8 @@ struct OnboardingView: View {
     private var growthContext: some View {
         VStack(alignment: .leading, spacing: NTSpacing.xl) {
             onboardingTitle("Where are you headed?", "Share the professional direction you care about—not just the next title. This helps us find people whose experience or journey is genuinely relevant.")
+            Text("Optional themes")
+                .font(.headline)
             selectionGrid(options: growthOptions, selection: $growthAreas, maximum: 4)
             NTFormField(
                 title: "What do you want to achieve?",
@@ -292,7 +321,7 @@ struct OnboardingView: View {
                 limit: 240
             )
             NTFormField(
-                title: "What perspective would help right now?",
+                title: "What perspective would help right now? · Optional",
                 prompt: "Describe the perspective or decision you’re seeking",
                 text: $growthInterest,
                 detail: "Be specific enough to guide an introduction, but broad enough for a natural conversation.",
@@ -512,7 +541,7 @@ struct OnboardingView: View {
             && !role.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         case 2: roleScope.count >= 20 && currentFocus.count >= 20
-        case 3: !growthAreas.isEmpty && professionalAmbition.count >= 20 && growthInterest.count >= 20
+        case 3: professionalAmbition.count >= 20
         case 4: !contributionAreas.isEmpty && !helpFormats.isEmpty && contribution.count >= 20
         case 6: !networkingGoals.isEmpty
         default: true
@@ -561,8 +590,18 @@ struct OnboardingView: View {
         if let value = suggestions.city?.trimmedForImport { city = value }
         if let value = suggestions.roleScope?.trimmedForImport { roleScope = value }
         if let value = suggestions.yearsExperience?.trimmedForImport { yearsExperience = value }
-        contributionAreas.formUnion(suggestions.topics.prefix(4))
-        step = 1
+        if let value = suggestions.currentFocus?.trimmedForImport { currentFocus = value }
+        contributionAreas.formUnion(suggestions.contributionAreas)
+        if let value = suggestions.experienceSummary?.trimmedForImport { contribution = value }
+        didUseResumeDraft = true
+
+        if name.trimmedForImport == nil || role.trimmedForImport == nil || city.trimmedForImport == nil {
+            step = 1
+        } else if roleScope.count < 20 || currentFocus.count < 20 {
+            step = 2
+        } else {
+            step = 3
+        }
     }
 
     private func hydrateDraftFromStore() {
@@ -596,6 +635,342 @@ struct OnboardingView: View {
         if meetAcrossCompanies { values.append("Across companies") }
         if includeAdjacentIndustries { values.append("Adjacent industries") }
         return values.isEmpty ? "Within your current professional context" : values.joined(separator: " · ")
+    }
+}
+
+private struct ResumeImportFlowView: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let onApply: (ProfileImportSuggestions) -> Void
+    let onContinueManually: () -> Void
+    let onChooseAnother: () -> Void
+
+    @State private var draft: ProfileImportSuggestions?
+
+    var body: some View {
+        Group {
+            switch store.member.resumeStatus {
+            case .processing:
+                processingView
+            case .ready(let suggestions):
+                reviewView(fallback: suggestions)
+            case .notAdded where store.resumeImportError != nil:
+                errorView
+            case .uploaded:
+                unavailableView
+            case .applied:
+                appliedView
+            case .notAdded:
+                errorView
+            }
+        }
+        .background(NTColor.background.ignoresSafeArea())
+        .foregroundStyle(NTColor.textPrimary)
+        .interactiveDismissDisabled(store.member.resumeStatus == .processing)
+        .onAppear { synchronizeDraft(with: store.member.resumeStatus) }
+        .onChange(of: store.member.resumeStatus) { _, status in
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                synchronizeDraft(with: status)
+            }
+        }
+    }
+
+    private var processingView: some View {
+        VStack(alignment: .leading, spacing: NTSpacing.xxl) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(NTColor.accent.opacity(0.1))
+                    .frame(width: 112, height: 112)
+                Image(systemName: "doc.text.magnifyingglass")
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(NTColor.accent)
+                    .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: NTSpacing.sm) {
+                Text("Turning your résumé into a draft")
+                    .font(.largeTitle.weight(.semibold))
+                Text("We’re extracting only the professional facts that can save you setup time.")
+                    .foregroundStyle(NTColor.textSecondary)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(ResumeImportStage.allCases, id: \.rawValue) { stage in
+                    processingRow(stage)
+                    if stage != .readyToReview { Divider().padding(.leading, 44) }
+                }
+            }
+            .padding(.horizontal, NTSpacing.md)
+            .ntSurface()
+
+            NTPrivacyNote(text: "The PDF stays on this iPhone. Contact details are removed before protected résumé text is sent for drafting.")
+            Spacer()
+        }
+        .padding(NTSpacing.lg)
+    }
+
+    private func processingRow(_ stage: ResumeImportStage) -> some View {
+        let current = store.resumeImportStage.rawValue
+        let completed = stage.rawValue < current
+        let active = stage == store.resumeImportStage
+        return HStack(spacing: NTSpacing.md) {
+            Image(systemName: completed ? "checkmark.circle.fill" : active ? "circle.dotted" : "circle")
+                .foregroundStyle(completed ? NTColor.success : active ? NTColor.accent : NTColor.separator)
+                .font(.title3)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: NTSpacing.xxs) {
+                Text(stage.title).font(.body.weight(active ? .semibold : .regular))
+                if active { Text(stage.detail).font(.caption).foregroundStyle(NTColor.textSecondary) }
+            }
+            Spacer()
+            if active { ProgressView().controlSize(.small) }
+        }
+        .frame(minHeight: active ? 64 : 52)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func reviewView(fallback: ProfileImportSuggestions) -> some View {
+        let value = draft ?? fallback
+        return NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: NTSpacing.xl) {
+                    VStack(alignment: .leading, spacing: NTSpacing.sm) {
+                        Label("RÉSUMÉ DRAFT", systemImage: "checkmark.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .tracking(1)
+                            .foregroundStyle(NTColor.success)
+                        Text("Keep what feels right")
+                            .font(.largeTitle.weight(.semibold))
+                        Text("We found these details in your résumé. Remove anything you don’t want in your profile; you can edit the rest next.")
+                            .foregroundStyle(NTColor.textSecondary)
+                    }
+
+                    NTPrivacyNote(text: "Nothing is added to your profile until you choose Use selected details.")
+
+                    importSection("Professional foundation", systemImage: "person.text.rectangle") {
+                        removableField("Name", value: value.name) { draft?.name = nil }
+                        removableField("Current role", value: value.role) { draft?.role = nil }
+                        removableField("City", value: value.city) { draft?.city = nil }
+                        removableField("Experience", value: value.yearsExperience) { draft?.yearsExperience = nil }
+                    }
+
+                    importSection("Work context", systemImage: "briefcase") {
+                        removableField("Role scope", value: value.roleScope) { draft?.roleScope = nil }
+                        removableField("Current focus", value: value.currentFocus) { draft?.currentFocus = nil }
+                    }
+
+                    if !value.topics.isEmpty {
+                        importSection("Expertise", systemImage: "sparkles") {
+                            removablePills(value.topics, remove: { item in draft?.topics.removeAll { $0 == item } })
+                        }
+                    }
+
+                    if !value.professionalHistory.isEmpty {
+                        importSection("Professional history", systemImage: "clock.arrow.circlepath") {
+                            ForEach(value.professionalHistory) { experience in
+                                removableExperience(experience) {
+                                    draft?.professionalHistory.removeAll { $0.id == experience.id }
+                                }
+                            }
+                        }
+                    }
+
+                    if value.education?.trimmedForImport != nil {
+                        importSection("Education", systemImage: "graduationcap") {
+                            removableField("Résumé detail", value: value.education) { draft?.education = nil }
+                        }
+                    }
+
+                    if !value.contributionAreas.isEmpty || value.experienceSummary?.trimmedForImport != nil {
+                        importSection("Experience you can speak from", systemImage: "lightbulb") {
+                            if !value.contributionAreas.isEmpty {
+                                removablePills(value.contributionAreas) { item in
+                                    draft?.contributionAreas.removeAll { $0 == item }
+                                }
+                            }
+                            removableField("Demonstrated experience", value: value.experienceSummary) {
+                                draft?.experienceSummary = nil
+                            }
+                        }
+                    }
+                }
+                .padding(NTSpacing.lg)
+                .padding(.bottom, 110)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Start over", action: onChooseAnother)
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: NTSpacing.sm) {
+                    Button("Use selected details") { onApply(value) }
+                        .buttonStyle(NTPrimaryButtonStyle())
+                    Button("Continue without résumé", action: onContinueManually)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(NTColor.textSecondary)
+                }
+                .padding(.horizontal, NTSpacing.lg)
+                .padding(.vertical, NTSpacing.md)
+                .background(.ultraThinMaterial)
+            }
+        }
+    }
+
+    private func importSection<Content: View>(
+        _ title: String,
+        systemImage: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: NTSpacing.md) {
+            Label(title, systemImage: systemImage)
+                .font(.headline)
+                .foregroundStyle(NTColor.accentStrong)
+            content()
+        }
+        .padding(NTSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .ntSurface()
+    }
+
+    @ViewBuilder
+    private func removableField(_ label: String, value: String?, remove: @escaping () -> Void) -> some View {
+        if let value = value?.trimmedForImport {
+            HStack(alignment: .top, spacing: NTSpacing.sm) {
+                VStack(alignment: .leading, spacing: NTSpacing.xxs) {
+                    Text(label.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(NTColor.textSecondary)
+                    Text(value).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: NTSpacing.sm)
+                removeButton(label: label, action: remove)
+            }
+            .padding(.vertical, NTSpacing.xs)
+        }
+    }
+
+    private func removablePills(_ values: [String], remove: @escaping (String) -> Void) -> some View {
+        NTPillFlow(spacing: NTSpacing.xs) {
+            ForEach(values, id: \.self) { value in
+                Button { remove(value) } label: {
+                    HStack(spacing: NTSpacing.xxs) {
+                        Text(value)
+                        Image(systemName: "xmark").font(.caption2.weight(.bold))
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .padding(.horizontal, NTSpacing.sm)
+                    .padding(.vertical, NTSpacing.xs)
+                    .background(NTColor.accent.opacity(0.1))
+                    .foregroundStyle(NTColor.accentStrong)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(value)")
+            }
+        }
+    }
+
+    private func removableExperience(_ experience: ProfessionalExperience, remove: @escaping () -> Void) -> some View {
+        HStack(alignment: .top, spacing: NTSpacing.sm) {
+            VStack(alignment: .leading, spacing: NTSpacing.xxs) {
+                Text(experience.role).font(.subheadline.weight(.semibold))
+                Text([experience.company, experience.period].filter { !$0.isEmpty }.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(NTColor.textSecondary)
+            }
+            Spacer()
+            removeButton(label: "\(experience.role) at \(experience.company)", action: remove)
+        }
+        .padding(.vertical, NTSpacing.xs)
+    }
+
+    private func removeButton(label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(NTColor.textSecondary.opacity(0.7))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Remove \(label)")
+    }
+
+    private var errorView: some View {
+        VStack(spacing: NTSpacing.xl) {
+            Spacer()
+            Image(systemName: "doc.badge.ellipsis")
+                .font(.system(size: 48))
+                .foregroundStyle(NTColor.accent)
+            VStack(spacing: NTSpacing.sm) {
+                Text("We couldn’t read that résumé")
+                    .font(.title.weight(.semibold))
+                Text(store.resumeImportError ?? "Try another PDF, or continue and add only the details that matter.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(NTColor.textSecondary)
+            }
+            Spacer()
+            Button("Choose another PDF", action: onChooseAnother)
+                .buttonStyle(NTPrimaryButtonStyle())
+            Button("Continue manually", action: onContinueManually)
+                .buttonStyle(NTSecondaryButtonStyle())
+        }
+        .padding(NTSpacing.lg)
+    }
+
+    private var unavailableView: some View {
+        VStack(spacing: NTSpacing.xl) {
+            Spacer()
+            ContentUnavailableView(
+                "Drafting is temporarily unavailable",
+                systemImage: "wand.and.stars.inverse",
+                description: Text("Your profile has not changed. You can continue manually and return later.")
+            )
+            Spacer()
+            Button("Continue manually", action: onContinueManually)
+                .buttonStyle(NTPrimaryButtonStyle())
+        }
+        .padding(NTSpacing.lg)
+    }
+
+    private var appliedView: some View {
+        VStack(spacing: NTSpacing.xl) {
+            Spacer()
+            ContentUnavailableView("Draft added", systemImage: "checkmark.circle.fill")
+            Spacer()
+            Button("Continue", action: onContinueManually)
+                .buttonStyle(NTPrimaryButtonStyle())
+        }
+        .padding(NTSpacing.lg)
+    }
+
+    private func synchronizeDraft(with status: ResumeEnrichmentStatus) {
+        if case .ready(let suggestions) = status, draft == nil {
+            draft = suggestions
+        }
+    }
+}
+
+private extension ResumeImportStage {
+    var title: String {
+        switch self {
+        case .readingDocument: "Reading your résumé"
+        case .protectingPrivacy: "Removing contact details"
+        case .buildingProfile: "Building professional context"
+        case .readyToReview: "Ready for your review"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .readingDocument: "Extracting text securely on this iPhone"
+        case .protectingPrivacy: "Email, phone, and links stay out of the draft"
+        case .buildingProfile: "Finding roles, scope, expertise, and education"
+        case .readyToReview: "Preparing the details you control"
+        }
     }
 }
 

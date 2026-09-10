@@ -69,7 +69,10 @@ protocol BackendService: Sendable {
     func blockMember(_ id: UUID) async throws
     func unblockMember(named name: String) async throws
     func removeConnection(_ id: UUID) async throws
-    func processResume(fileURL: URL) async throws -> ProfileImportSuggestions?
+    func processResume(
+        fileURL: URL,
+        progress: @escaping @Sendable (ResumeImportStage) async -> Void
+    ) async throws -> ProfileImportSuggestions?
     func submitReport(category: ReportCategory, note: String, subjectID: UUID?, conversationID: UUID?) async throws
     func deleteAccount() async throws
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws

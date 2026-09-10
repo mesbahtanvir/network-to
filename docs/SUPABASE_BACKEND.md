@@ -124,7 +124,9 @@ The app sends StoreKit’s JWS transaction after purchase, restore, and authenti
 
 The résumé fast path uses the native iOS document picker and accepts PDFs smaller than 10 MB. PDFKit reads embedded text locally; pages without readable embedded text use Apple Vision OCR. Before any text leaves the phone, common email addresses, phone numbers, and URLs are removed. The source PDF is never uploaded by this flow.
 
-The authenticated `process-resume` function uses `deepseek-v4-flash` by default with a JSON schema. It accepts at most 40,000 characters and treats résumé contents as untrusted source data rather than instructions. It extracts only résumé-supported facts—never ambitions, personality, protected traits, compensation, contact details, or promises of help. The member must review the returned draft before applying it.
+The authenticated `process-resume` function uses `deepseek-v4-flash` by default with a strict JSON schema. It accepts at most 40,000 characters and treats résumé contents as untrusted source data rather than instructions. It can draft identity, current role and scope, an explicitly supported current focus, experience range, expertise, work history, education, and a neutral summary of demonstrated experience. It never drafts ambitions, growth goals, personality, protected traits, compensation, contact details, willingness to help, or contribution boundaries.
+
+The iOS flow reports real stages—local reading, contact-detail protection, professional drafting, and review. The returned draft is held separately from the member profile. Every inferred field, topic, and work-history item has an individual remove control, and nothing is applied until the member explicitly confirms the selected details. After confirmation, onboarding skips factual sections that are already complete and asks the member to write the professional ambition that cannot safely be inferred.
 
 Set `DEEPSEEK_API_KEY` as a Supabase function secret to enable live drafting. `DEEPSEEK_RESUME_MODEL` is optional and defaults to `deepseek-v4-flash`.
 

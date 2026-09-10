@@ -17,6 +17,7 @@ final class AppStore: ObservableObject {
     @Published private(set) var isCompletingOnboarding = false
     @Published var transientMessage: String?
     @Published private(set) var resumeImportError: String?
+    @Published private(set) var resumeImportStage: ResumeImportStage = .readingDocument
     @Published private(set) var verifiedWorkEmail = "alex@orbitsystems.com"
 
     @Published private(set) var member: ProfessionalProfile
@@ -76,6 +77,11 @@ final class AppStore: ObservableObject {
         #endif
         self.introduction = MockData.introduction
         #if DEBUG
+        if launchArguments.contains("--resume-review-preview") {
+            self.hasAuthenticated = true
+            self.hasCompletedOnboarding = false
+            self.member.resumeStatus = .ready(MockData.resumeDraft)
+        }
         if launchArguments.contains("--connections-preview") {
             self.connections = []
         } else if launchArguments.contains("--subscription-expired-preview") {
@@ -498,9 +504,15 @@ final class AppStore: ObservableObject {
 
     func processResume(fileURL: URL) async {
         resumeImportError = nil
+        resumeImportStage = .readingDocument
         member.resumeStatus = .processing
         do {
-            if let suggestions = try await backend.processResume(fileURL: fileURL) {
+            if let suggestions = try await backend.processResume(
+                fileURL: fileURL,
+                progress: { [weak self] stage in
+                    await MainActor.run { self?.resumeImportStage = stage }
+                }
+            ) {
                 member.resumeStatus = .ready(suggestions)
             } else {
                 member.resumeStatus = .uploaded
@@ -522,9 +534,21 @@ final class AppStore: ObservableObject {
         if let yearsExperience = suggestions.yearsExperience?.trimmedNonEmpty {
             member.yearsExperience = yearsExperience
         }
+        if let currentFocus = suggestions.currentFocus?.trimmedNonEmpty {
+            member.currentFocus = currentFocus
+        }
+        if let education = suggestions.education?.trimmedNonEmpty {
+            member.education = education
+        }
         member.topics = Array((member.topics + suggestions.topics).uniqued().prefix(8))
         if !suggestions.professionalHistory.isEmpty {
             member.professionalHistory = suggestions.professionalHistory
+        }
+        if !suggestions.contributionAreas.isEmpty {
+            member.contributionAreas = Array((member.contributionAreas + suggestions.contributionAreas).uniqued().prefix(4))
+        }
+        if let experienceSummary = suggestions.experienceSummary?.trimmedNonEmpty {
+            member.contribution = experienceSummary
         }
         member.resumeStatus = .applied
         transientMessage = "Résumé draft applied—review it before saving"

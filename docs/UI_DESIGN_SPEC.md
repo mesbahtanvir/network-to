@@ -113,6 +113,8 @@ There is no separate notification centre in V1. Relevant notifications deep-link
 | A-02 | Work email | Collect the company email for the selected intent | Empty, invalid, consumer email rejected, submitted |
 | A-03 | Verify email | Enter a six-digit OTP with native one-time-code AutoFill | Waiting, invalid code, expired code, resend cooldown |
 | O-01 | Context introduction | Explain why professional substance improves reciprocal introductions | Verified, ready |
+| O-01A | Résumé processing | Show real local-reading, privacy-protection, drafting, and ready stages without implying the PDF is uploaded | Reading, protecting, drafting, ready, failed |
+| O-01B | Résumé draft review | Let the member remove any inferred field, expertise topic, education detail, or job before applying the draft | Complete draft, sparse draft, item removed, continue manually |
 | O-02 | Professional identity | Capture real name, role, verified company, and city | Empty, partial, complete |
 | O-03 | Professional context | Capture role scope, current focus, and experience | Empty, partial, validation, complete |
 | O-04 | Professional direction | Capture what the member wants to achieve, their growth areas, and the perspective useful now | Empty, selected, detailed, complete |
@@ -173,14 +175,16 @@ A person should become a **Connection** only after the relationship progressed b
 
 ### 6.1 Join and establish trust
 
-`Welcome → Create account → Work email → Verify → Context introduction → Optional résumé prefill → Professional identity → Work context → Growth + contribution → Meeting preferences → Profile review → Today`
+`Welcome → Create account → Work email → Verify → Context introduction → Optional résumé processing → Remove/confirm inferred details → First incomplete context step → Member-authored ambition → Contribution confirmation → Meeting preferences → Profile review → Today`
 
 Returning members follow `Welcome → Sign in → Work email → Verify → Today`.
 
 - Consumer email domains are rejected with a direct explanation.
 - Unknown company domains enter review; the UI must not pretend that validation is instant.
 - Public and private fields are visibly distinguished during setup.
-- Optional résumé extraction prefills only factual identity, role, experience, and expertise fields. The member reviews the draft before it is used publicly; professional ambition, growth intent, and contribution boundaries remain member-authored.
+- Optional résumé extraction prefills only supported facts: identity, role scope, explicit current/latest-role focus, experience range, expertise, work history, education, and demonstrated experience. The PDF remains on-device and contact details are redacted before bounded text is processed.
+- The draft remains separate from the profile until confirmation. Every inferred item has a direct remove action, and the member can discard the draft entirely.
+- Résumé users skip factual screens that are already complete. Professional ambition remains required and member-authored; growth themes, immediate perspective, help format, and contribution boundaries can be confirmed or added with low-input controls.
 
 ### 6.2 Weekly introduction
 

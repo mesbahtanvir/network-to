@@ -170,14 +170,25 @@ enum ResumeEnrichmentStatus: Equatable, Sendable {
     case applied
 }
 
+enum ResumeImportStage: Int, CaseIterable, Equatable, Sendable {
+    case readingDocument
+    case protectingPrivacy
+    case buildingProfile
+    case readyToReview
+}
+
 struct ProfileImportSuggestions: Equatable, Sendable {
     var name: String?
     var role: String?
     var city: String?
     var roleScope: String?
     var yearsExperience: String?
+    var currentFocus: String? = nil
+    var education: String? = nil
     var topics: [String]
     var professionalHistory: [ProfessionalExperience]
+    var contributionAreas: [String] = []
+    var experienceSummary: String? = nil
 
     var summary: String {
         let historyCount = professionalHistory.count

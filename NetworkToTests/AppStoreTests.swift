@@ -204,6 +204,8 @@ final class AppStoreTests: XCTestCase {
         XCTAssertEqual(draft.role, "Engineering Director")
         XCTAssertEqual(draft.professionalHistory.count, 2)
         XCTAssertTrue(draft.topics.contains("Distributed systems"))
+        XCTAssertEqual(draft.currentFocus, "Scaling platform reliability while improving engineering teams' delivery experience.")
+        XCTAssertTrue(draft.contributionAreas.contains("Engineering leadership"))
     }
 
     func testApplyingResumeDraftDoesNotInventCareerGoals() {
@@ -215,16 +217,25 @@ final class AppStoreTests: XCTestCase {
             city: "New York, NY",
             roleScope: "Leads platform and product engineering across a multi-team organization.",
             yearsExperience: "15+ years",
+            currentFocus: "Scaling a product platform across multiple engineering teams.",
+            education: "BSc, Computer Science",
             topics: ["Platform strategy", "Engineering leadership"],
             professionalHistory: [
                 ProfessionalExperience(id: UUID(), role: "VP Engineering", company: "Example", period: "2023–Present")
-            ]
+            ],
+            contributionAreas: ["Engineering leadership", "Scaling teams"],
+            experienceSummary: "Scaling engineering organizations while evolving platform ownership."
         )
 
         store.applyResumeSuggestions(draft)
 
         XCTAssertEqual(store.member.role, "VP Engineering")
         XCTAssertEqual(store.member.city, "New York, NY")
+        XCTAssertEqual(store.member.currentFocus, "Scaling a product platform across multiple engineering teams.")
+        XCTAssertEqual(store.member.education, "BSc, Computer Science")
+        XCTAssertTrue(store.member.contributionAreas.contains("Engineering leadership"))
+        XCTAssertTrue(store.member.contributionAreas.contains("Scaling teams"))
+        XCTAssertEqual(store.member.contribution, "Scaling engineering organizations while evolving platform ownership.")
         XCTAssertEqual(store.member.professionalAmbition, originalAmbition)
         XCTAssertEqual(store.member.resumeStatus, .applied)
     }

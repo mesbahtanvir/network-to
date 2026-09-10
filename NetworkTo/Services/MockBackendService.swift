@@ -101,20 +101,18 @@ actor MockBackendService: BackendService {
         if body.lowercased().contains("fail") { throw MockServiceError.requestFailed }
     }
 
-    func processResume(fileURL: URL) async throws -> ProfileImportSuggestions? {
-        try await Task.sleep(for: .milliseconds(750))
-        return ProfileImportSuggestions(
-            name: "Alex Morgan",
-            role: "Engineering Director",
-            city: "Toronto, ON",
-            roleScope: "Leads platform engineering across reliability, developer experience, and core services.",
-            yearsExperience: "10–15 years",
-            topics: ["Platform leadership", "Distributed systems", "Developer experience", "Team scaling"],
-            professionalHistory: [
-                ProfessionalExperience(id: UUID(), role: "Engineering Director", company: "Orbit Systems", period: "2022–Present"),
-                ProfessionalExperience(id: UUID(), role: "Senior Engineering Manager", company: "Maple Cloud", period: "2018–2022")
-            ]
-        )
+    func processResume(
+        fileURL: URL,
+        progress: @escaping @Sendable (ResumeImportStage) async -> Void
+    ) async throws -> ProfileImportSuggestions? {
+        await progress(.readingDocument)
+        try await Task.sleep(for: .milliseconds(180))
+        await progress(.protectingPrivacy)
+        try await Task.sleep(for: .milliseconds(180))
+        await progress(.buildingProfile)
+        try await Task.sleep(for: .milliseconds(260))
+        await progress(.readyToReview)
+        return MockData.resumeDraft
     }
 
     func submitReport(category: ReportCategory, note: String, subjectID: UUID?, conversationID: UUID?) async throws {
@@ -127,6 +125,23 @@ actor MockBackendService: BackendService {
 }
 
 enum MockData {
+    static let resumeDraft = ProfileImportSuggestions(
+        name: "Alex Morgan",
+        role: "Engineering Director",
+        city: "Toronto, ON",
+        roleScope: "Leads platform engineering across reliability, developer experience, and core services.",
+        yearsExperience: "10–15 years",
+        currentFocus: "Scaling platform reliability while improving engineering teams' delivery experience.",
+        education: "BSc, Computer Science",
+        topics: ["Platform leadership", "Distributed systems", "Developer experience", "Team scaling"],
+        professionalHistory: [
+            ProfessionalExperience(id: UUID(), role: "Engineering Director", company: "Orbit Systems", period: "2022–Present"),
+            ProfessionalExperience(id: UUID(), role: "Senior Engineering Manager", company: "Maple Cloud", period: "2018–2022")
+        ],
+        contributionAreas: ["Distributed systems", "Engineering leadership", "Scaling teams"],
+        experienceSummary: "Leading platform organizations through reliability and team-scaling transitions."
+    )
+
     static let introduction = Introduction(
         id: UUID(uuidString: "6B78A00B-A439-45C2-942F-9C1E811D0479")!,
         person: .sarah,

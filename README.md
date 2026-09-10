@@ -7,7 +7,7 @@ The product is intentionally centered on selective same-city introductions, reci
 ## What is implemented
 
 - Calm magic-link work-email verification with automatic work-laptop-to-iPhone handoff
-- Professional-context onboarding with optional AI résumé prefill and member-reviewed career direction
+- Résumé-first professional onboarding with real processing stages, item-by-item removal, and member-authored career direction
 - Today, Connections, Messages, and Profile experiences
 - Private Interested/Pass decisions and a mutual-interest conversation gate
 - 1:1 meetup planning, private feedback, and opt-in connection creation
@@ -18,7 +18,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - No gender collection, gender filters, or gender-based ranking
 - A production-hardened Supabase backend for Auth, Postgres, RLS, hourly matching, retention, Realtime tables, and Edge Functions
 - Transactional profile setup, retry-safe messaging, and a restart-safe cross-device magic-link flow
-- On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting through a rate-limited Supabase Edge Function
+- On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting of identity, role context, expertise, history, education, and demonstrated experience through a rate-limited Supabase Edge Function
 - Deterministic mock data for previews and unit tests
 
 The membership product identifier is `com.mesbahtanvir.networkto.monthly`. The local Xcode scheme uses `NetworkTo/Products.storekit` at $9.99/month for simulator testing; production always displays Apple’s localized App Store price.

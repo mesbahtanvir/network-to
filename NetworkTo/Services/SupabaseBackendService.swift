@@ -356,7 +356,11 @@ actor SupabaseBackendService: BackendService {
             .execute()
     }
 
-    func processResume(fileURL: URL) async throws -> ProfileImportSuggestions? {
+    func processResume(
+        fileURL: URL,
+        progress: @escaping @Sendable (ResumeImportStage) async -> Void
+    ) async throws -> ProfileImportSuggestions? {
+        await progress(.readingDocument)
         guard fileURL.pathExtension.lowercased() == "pdf" else {
             throw SupabaseBackendError.invalidResume
         }
@@ -366,15 +370,18 @@ actor SupabaseBackendService: BackendService {
             throw SupabaseBackendError.resumeTooLarge
         }
 
-        let extractedText = try ResumeTextExtractor.extract(from: fileURL)
+        let extractedText = try ResumeTextExtractor.extractRawText(from: fileURL)
+        await progress(.protectingPrivacy)
+        let protectedText = try ResumeTextExtractor.protect(extractedText)
 
         let session = try await client.auth.session
+        await progress(.buildingProfile)
         var request = URLRequest(url: configuration.url.appending(path: "functions/v1/process-resume"))
         request.httpMethod = "POST"
         request.setValue(configuration.publishableKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.httpBody = try JSONEncoder().encode(ResumeProcessingRequest(resumeText: extractedText))
+        request.httpBody = try JSONEncoder().encode(ResumeProcessingRequest(resumeText: protectedText))
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SupabaseBackendError.requestFailed }
         if http.statusCode == 501 {
@@ -384,6 +391,7 @@ actor SupabaseBackendService: BackendService {
             throw SupabaseBackendError.resumeProcessingFailed
         }
         let payload = try JSONDecoder().decode(ResumeProcessingResponse.self, from: data)
+        await progress(.readyToReview)
         return payload.suggestions?.profileDraft
     }
 
@@ -512,7 +520,7 @@ private enum ResumeTextExtractor {
     private static let maximumCharacters = 40_000
     private static let minimumReadableCharacters = 80
 
-    static func extract(from fileURL: URL) throws -> String {
+    static func extractRawText(from fileURL: URL) throws -> String {
         guard let document = PDFDocument(url: fileURL), document.pageCount > 0 else {
             throw SupabaseBackendError.invalidResume
         }
@@ -529,11 +537,19 @@ private enum ResumeTextExtractor {
             }
         }
 
-        let readableText = redactContactDetails(in: normalized(pageText.joined(separator: "\n\n")))
+        let readableText = normalized(pageText.joined(separator: "\n\n"))
         guard readableText.count >= minimumReadableCharacters else {
             throw SupabaseBackendError.resumeHasNoReadableText
         }
-        return String(readableText.prefix(maximumCharacters))
+        return readableText
+    }
+
+    static func protect(_ text: String) throws -> String {
+        let protectedText = redactContactDetails(in: text)
+        guard protectedText.count >= minimumReadableCharacters else {
+            throw SupabaseBackendError.resumeHasNoReadableText
+        }
+        return String(protectedText.prefix(maximumCharacters))
     }
 
     private static func recognizeText(in image: CGImage) throws -> String {
@@ -1022,15 +1038,23 @@ private struct ResumeSuggestionsPayload: Decodable {
     let role: String
     let city: String
     let roleScope: String
+    let currentFocus: String
     let yearsExperience: String
+    let education: String
     let topics: [String]
     let professionalHistory: [ResumeExperiencePayload]
+    let contributionAreas: [String]
+    let experienceSummary: String
 
     enum CodingKeys: String, CodingKey {
         case name, role, city, topics
         case roleScope = "role_scope"
+        case currentFocus = "current_focus"
         case yearsExperience = "years_experience"
+        case education
         case professionalHistory = "professional_history"
+        case contributionAreas = "contribution_areas"
+        case experienceSummary = "experience_summary"
     }
 
     var profileDraft: ProfileImportSuggestions {
@@ -1040,10 +1064,14 @@ private struct ResumeSuggestionsPayload: Decodable {
             city: city.nilIfEmpty,
             roleScope: roleScope.nilIfEmpty,
             yearsExperience: yearsExperience.nilIfEmpty,
+            currentFocus: currentFocus.nilIfEmpty,
+            education: education.nilIfEmpty,
             topics: topics,
             professionalHistory: professionalHistory.map {
                 ProfessionalExperience(id: UUID(), role: $0.role, company: $0.company, period: $0.period)
-            }
+            },
+            contributionAreas: contributionAreas,
+            experienceSummary: experienceSummary.nilIfEmpty
         )
     }
 }
