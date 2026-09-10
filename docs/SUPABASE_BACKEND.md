@@ -89,17 +89,26 @@ Local hook and email-template settings live in `supabase/config.toml`. For a hos
 
 `auth-handoff` also applies durable, salted IP rate limits. Generate a separate random 256-bit `HANDOFF_RATE_LIMIT_SALT`; never reuse a signing, database, or Apple key.
 
-Example hosted deployment:
+## Production deployment
+
+Production changes are deployed only by [`.github/workflows/supabase.yml`](../.github/workflows/supabase.yml). Do not run `supabase db push` or `supabase functions deploy` against the hosted project from a development machine.
+
+Create a protected GitHub environment named `production` and add these encrypted environment secrets:
+
+- `SUPABASE_ACCESS_TOKEN`: a Supabase personal access token with access to the project
+- `SUPABASE_DB_PASSWORD`: the production project database password
+- `SUPABASE_PROJECT_ID`: the production project reference
+
+Pull requests that touch `supabase/**` start a local database, run the pgTAP suite, and type-check every Edge Function. A push to `main` deploys only after that validation passes: migrations are applied first, followed by `auth-handoff`, `delete-account`, `process-resume`, and `sync-subscription`. `generate-introductions` is deliberately excluded because the database schedule is the production matching path.
+
+Server-side function secrets are still configured separately in the Supabase Dashboard. They are not copied into GitHub unless a future workflow explicitly manages secret rotation.
+
+For initial GitHub environment setup, obtain these values from the Supabase Dashboard rather than committing them:
 
 ```sh
-supabase login
-supabase link --project-ref <project-ref>
-supabase db push
-supabase secrets set HANDOFF_RATE_LIMIT_SALT=<random-256-bit-secret>
-supabase functions deploy auth-handoff --no-verify-jwt
-supabase functions deploy delete-account
-supabase functions deploy process-resume
-supabase functions deploy sync-subscription
+SUPABASE_ACCESS_TOKEN=<personal-access-token>
+SUPABASE_DB_PASSWORD=<project-database-password>
+SUPABASE_PROJECT_ID=<project-reference>
 ```
 
 Supabase provides its URL and server-side keys to deployed functions. The database migration installs the matching and maintenance schedules, so no public scheduler URL or matching secret is needed for normal operation.

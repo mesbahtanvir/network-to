@@ -43,6 +43,8 @@ SUPABASE_PUBLISHABLE_KEY=<local publishable/anon key from supabase status>
 
 See [docs/SUPABASE_BACKEND.md](docs/SUPABASE_BACKEND.md) for local setup, the deployed production architecture, security boundaries, and the external SMTP, résumé-extraction, and APNs launch dependencies.
 
+Hosted Supabase migrations and Edge Functions are deployed only through the repository’s GitHub Actions workflow after validation. Local development commands must not mutate the production project.
+
 ## Verify
 
 ```sh
