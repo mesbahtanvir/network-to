@@ -1,0 +1,1182 @@
+<div id="network-to-introduction-flow" role="region" aria-label="Interactive network.to introduction and coffee-chat flow">
+  <style>
+    #network-to-introduction-flow {
+      color-scheme: light dark;
+      width: 100%;
+      height: 676px;
+      display: grid;
+      place-items: start center;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+      color: light-dark(#162033, #f5f7fa);
+    }
+
+    #network-to-introduction-flow * { box-sizing: border-box; }
+    #network-to-introduction-flow [hidden] { display: none !important; }
+
+    #network-to-introduction-flow .nd-phone {
+      position: relative;
+      width: min(100%, 393px);
+      height: 818px;
+      overflow: hidden;
+      transform: scale(.82);
+      transform-origin: top center;
+      border: 7px solid light-dark(#22262b, #303338);
+      border-radius: 48px;
+      background: light-dark(#f6f5f2, #111315);
+      box-shadow: 0 24px 70px light-dark(rgba(38, 47, 61, .16), rgba(0, 0, 0, .48));
+    }
+
+    #network-to-introduction-flow .nd-island {
+      position: absolute;
+      z-index: 20;
+      top: 10px;
+      left: 50%;
+      width: 118px;
+      height: 31px;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #08090a;
+    }
+
+    #network-to-introduction-flow .nd-status {
+      height: 43px;
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 23px 0;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-status span:last-child { display: flex; gap: 5px; }
+    #network-to-introduction-flow .nd-status svg { width: 14px; height: 14px; }
+
+    #network-to-introduction-flow .nd-stage {
+      display: none;
+      height: 757px;
+      padding: 8px 18px 102px;
+      overflow: hidden;
+    }
+
+    #network-to-introduction-flow .nd-stage.is-active { display: block; }
+    #network-to-introduction-flow .nd-stage.nd-deep { padding-bottom: 82px; }
+    #network-to-introduction-flow .nd-stage.nd-chat-stage { padding: 0 0 78px; }
+
+    #network-to-introduction-flow h1,
+    #network-to-introduction-flow h2,
+    #network-to-introduction-flow h3,
+    #network-to-introduction-flow p { margin: 0; }
+
+    #network-to-introduction-flow h1 {
+      font-size: 31px;
+      line-height: 1.08;
+      font-weight: 500;
+      letter-spacing: -.035em;
+    }
+
+    #network-to-introduction-flow h2 {
+      font-size: 21px;
+      line-height: 1.17;
+      font-weight: 500;
+      letter-spacing: -.022em;
+    }
+
+    #network-to-introduction-flow h3 {
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 500;
+      letter-spacing: -.01em;
+    }
+
+    #network-to-introduction-flow button,
+    #network-to-introduction-flow input,
+    #network-to-introduction-flow textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    #network-to-introduction-flow button { cursor: pointer; }
+    #network-to-introduction-flow button:focus-visible,
+    #network-to-introduction-flow input:focus-visible,
+    #network-to-introduction-flow textarea:focus-visible {
+      outline: 3px solid light-dark(#315b8a, #86b2df);
+      outline-offset: 2px;
+    }
+
+    #network-to-introduction-flow .nd-topbar {
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 13px;
+    }
+
+    #network-to-introduction-flow .nd-eyebrow {
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .075em;
+      text-transform: uppercase;
+    }
+
+    #network-to-introduction-flow .nd-avatar {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 50%;
+      background: light-dark(#dfe7ef, #283645);
+      color: light-dark(#315b8a, #b9d6f2);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .02em;
+    }
+
+    #network-to-introduction-flow .nd-avatar.nd-self {
+      background: light-dark(#e7ded4, #44352c);
+      color: light-dark(#7a4c2b, #e7b893);
+    }
+
+    #network-to-introduction-flow .nd-avatar.nd-large {
+      width: 74px;
+      height: 74px;
+      border-radius: 24px;
+      font-size: 22px;
+    }
+
+    #network-to-introduction-flow .nd-back,
+    #network-to-introduction-flow .nd-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: light-dark(#ecedea, #24282c);
+    }
+
+    #network-to-introduction-flow .nd-back svg,
+    #network-to-introduction-flow .nd-icon svg { width: 20px; height: 20px; }
+
+    #network-to-introduction-flow .nd-date {
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-intro-ready {
+      position: relative;
+      min-height: 304px;
+      overflow: hidden;
+      margin-top: 21px;
+      padding: 24px;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 86% 8%, light-dark(rgba(255,255,255,.8), rgba(255,255,255,.11)) 0 8%, transparent 31%),
+        linear-gradient(145deg, light-dark(#e9eef3, #1d2b39), light-dark(#dce6ef, #17222d));
+      border: 1px solid light-dark(#d9dfe4, #2e3e4d);
+    }
+
+    #network-to-introduction-flow .nd-intro-ready::after {
+      content: "";
+      position: absolute;
+      width: 235px;
+      height: 235px;
+      right: -110px;
+      bottom: -128px;
+      border: 40px solid light-dark(rgba(49,91,138,.09), rgba(134,178,223,.09));
+      border-radius: 50%;
+    }
+
+    #network-to-introduction-flow .nd-seal {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: light-dark(#315b8a, #86b2df);
+      color: light-dark(#fff, #142437);
+    }
+
+    #network-to-introduction-flow .nd-seal svg { width: 24px; height: 24px; }
+    #network-to-introduction-flow .nd-intro-ready .nd-eyebrow { margin-top: 23px; }
+    #network-to-introduction-flow .nd-intro-ready h2 { max-width: 250px; margin-top: 6px; font-size: 28px; }
+    #network-to-introduction-flow .nd-intro-ready p {
+      max-width: 278px;
+      margin-top: 11px;
+      color: light-dark(#596574, #b9c2cb);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    #network-to-introduction-flow .nd-primary,
+    #network-to-introduction-flow .nd-secondary,
+    #network-to-introduction-flow .nd-text-action {
+      min-height: 46px;
+      border: 0;
+      border-radius: 16px;
+      padding: 0 18px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-primary {
+      background: light-dark(#203f66, #b9d6f2);
+      color: light-dark(#fff, #162033);
+    }
+
+    #network-to-introduction-flow .nd-secondary {
+      background: light-dark(#ecedea, #24282c);
+      color: light-dark(#344050, #e4e8ec);
+    }
+
+    #network-to-introduction-flow .nd-text-action {
+      background: transparent;
+      color: light-dark(#315b8a, #86b2df);
+    }
+
+    #network-to-introduction-flow .nd-intro-ready .nd-primary {
+      position: absolute;
+      z-index: 2;
+      left: 24px;
+      bottom: 22px;
+    }
+
+    #network-to-introduction-flow .nd-availability {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 20px;
+      background: light-dark(#fff, #1a1d20);
+    }
+
+    #network-to-introduction-flow .nd-availability-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: light-dark(#f0e7df, #382b24);
+      color: light-dark(#a5683a, #d7a47b);
+    }
+
+    #network-to-introduction-flow .nd-availability p,
+    #network-to-introduction-flow .nd-row p,
+    #network-to-introduction-flow .nd-profile-copy p {
+      margin-top: 3px;
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    #network-to-introduction-flow .nd-small-action {
+      min-height: 44px;
+      border: 0;
+      border-radius: 13px;
+      padding: 0 12px;
+      background: light-dark(#ecedea, #24282c);
+      color: light-dark(#315b8a, #9fc5eb);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-tabbar {
+      position: absolute;
+      z-index: 12;
+      left: 10px;
+      right: 10px;
+      bottom: 9px;
+      height: 76px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 7px 6px 11px;
+      border: 1px solid light-dark(rgba(255,255,255,.75), rgba(255,255,255,.1));
+      border-radius: 28px;
+      background: light-dark(rgba(244,243,240,.88), rgba(29,32,35,.86));
+      box-shadow: 0 10px 35px light-dark(rgba(38,47,61,.14), rgba(0,0,0,.32));
+      backdrop-filter: blur(26px) saturate(1.35);
+    }
+
+    #network-to-introduction-flow .nd-tab {
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      border: 0;
+      border-radius: 19px;
+      background: transparent;
+      color: light-dark(#6e7782, #a7afb8);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-tab svg { width: 21px; height: 21px; }
+    #network-to-introduction-flow .nd-tab.is-active {
+      background: light-dark(rgba(255,255,255,.8), rgba(255,255,255,.09));
+      color: light-dark(#203f66, #b9d6f2);
+    }
+
+    #network-to-introduction-flow .nd-person-head {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      margin: 6px 0 17px;
+    }
+
+    #network-to-introduction-flow .nd-person-head h1 { font-size: 29px; }
+    #network-to-introduction-flow .nd-role {
+      margin-top: 5px;
+      color: light-dark(#4d5866, #bdc4cc);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    #network-to-introduction-flow .nd-verified {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 7px;
+      color: light-dark(#315b8a, #9fc5eb);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-verified svg { width: 14px; height: 14px; }
+
+    #network-to-introduction-flow .nd-topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 17px;
+    }
+
+    #network-to-introduction-flow .nd-topic {
+      display: inline-flex;
+      align-items: center;
+      min-height: 29px;
+      border-radius: 10px;
+      padding: 0 10px;
+      background: light-dark(#ecedea, #24282c);
+      color: light-dark(#4e5966, #c2c8cf);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-reciprocal {
+      border-top: 1px solid light-dark(#e1e2de, #30353a);
+    }
+
+    #network-to-introduction-flow .nd-value-block {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 11px;
+      padding: 16px 0;
+      border-bottom: 1px solid light-dark(#e1e2de, #30353a);
+    }
+
+    #network-to-introduction-flow .nd-value-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: light-dark(#e5edf4, #203141);
+      color: light-dark(#315b8a, #9fc5eb);
+    }
+
+    #network-to-introduction-flow .nd-value-icon svg { width: 16px; height: 16px; }
+    #network-to-introduction-flow .nd-value-block p {
+      margin-top: 5px;
+      color: light-dark(#5f6976, #aeb6bf);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    #network-to-introduction-flow .nd-meeting-strip {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 11px;
+      align-items: center;
+      margin-top: 14px;
+      padding: 13px;
+      border-radius: 17px;
+      background: light-dark(#f0e7df, #382b24);
+      color: light-dark(#6f482c, #e1b896);
+    }
+
+    #network-to-introduction-flow .nd-meeting-strip svg { width: 20px; height: 20px; }
+    #network-to-introduction-flow .nd-meeting-strip p {
+      margin-top: 3px;
+      color: light-dark(#7d604b, #c9a88e);
+      font-size: 11px;
+    }
+
+    #network-to-introduction-flow .nd-response-bar,
+    #network-to-introduction-flow .nd-bottom-bar {
+      position: absolute;
+      z-index: 11;
+      left: 17px;
+      right: 17px;
+      bottom: 16px;
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 1fr 1.45fr;
+      gap: 10px;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid light-dark(rgba(255,255,255,.75), rgba(255,255,255,.1));
+      border-radius: 25px;
+      background: light-dark(rgba(244,243,240,.9), rgba(29,32,35,.88));
+      box-shadow: 0 10px 35px light-dark(rgba(38,47,61,.15), rgba(0,0,0,.32));
+      backdrop-filter: blur(26px) saturate(1.35);
+    }
+
+    #network-to-introduction-flow .nd-response-bar button,
+    #network-to-introduction-flow .nd-bottom-bar button { width: 100%; }
+    #network-to-introduction-flow .nd-bottom-bar { grid-template-columns: 1fr; }
+
+    #network-to-introduction-flow .nd-centred {
+      min-height: 585px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      text-align: center;
+    }
+
+    #network-to-introduction-flow .nd-state-icon {
+      width: 78px;
+      height: 78px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+      border-radius: 27px;
+      background: light-dark(#e5edf4, #203141);
+      color: light-dark(#315b8a, #9fc5eb);
+    }
+
+    #network-to-introduction-flow .nd-state-icon.nd-success {
+      background: light-dark(#e1efe7, #183126);
+      color: light-dark(#2e7350, #6bc18f);
+    }
+
+    #network-to-introduction-flow .nd-state-icon svg { width: 34px; height: 34px; }
+    #network-to-introduction-flow .nd-centred > p {
+      max-width: 300px;
+      margin-top: 10px;
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    #network-to-introduction-flow .nd-private-note {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      margin-top: 19px;
+      color: light-dark(#315b8a, #9fc5eb);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-private-note svg { width: 15px; height: 15px; }
+
+    #network-to-introduction-flow .nd-notification {
+      position: absolute;
+      z-index: 25;
+      top: 53px;
+      left: 13px;
+      right: 13px;
+      display: grid;
+      grid-template-columns: 40px 1fr 18px;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid light-dark(rgba(255,255,255,.8), rgba(255,255,255,.1));
+      border-radius: 20px;
+      padding: 12px;
+      background: light-dark(rgba(255,255,255,.92), rgba(32,35,39,.93));
+      box-shadow: 0 12px 34px rgba(0,0,0,.18);
+      opacity: 0;
+      transform: translateY(-18px);
+      pointer-events: none;
+      transition: opacity .22s ease, transform .22s ease;
+      backdrop-filter: blur(24px);
+      text-align: left;
+    }
+
+    #network-to-introduction-flow .nd-notification.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    #network-to-introduction-flow .nd-notification .nd-seal { width: 40px; height: 40px; border-radius: 13px; }
+    #network-to-introduction-flow .nd-notification h3 { font-size: 13px; }
+    #network-to-introduction-flow .nd-notification p { margin-top: 2px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+
+    #network-to-introduction-flow .nd-mutual-person {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 24px;
+      padding: 14px 16px;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 20px;
+      background: light-dark(#fff, #1a1d20);
+      text-align: left;
+    }
+
+    #network-to-introduction-flow .nd-mutual-person p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 12px; }
+
+    #network-to-introduction-flow .nd-chat-head {
+      height: 70px;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      gap: 7px;
+      align-items: center;
+      padding: 5px 13px 8px;
+      border-bottom: 1px solid light-dark(#e1e2de, #30353a);
+      background: light-dark(#f6f5f2, #111315);
+    }
+
+    #network-to-introduction-flow .nd-chat-identity { text-align: center; }
+    #network-to-introduction-flow .nd-chat-identity h3 { font-size: 14px; }
+    #network-to-introduction-flow .nd-chat-identity p { margin-top: 2px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+
+    #network-to-introduction-flow .nd-context-strip {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      margin: 12px 14px;
+      padding: 11px 12px;
+      border-radius: 15px;
+      background: light-dark(#e5edf4, #203141);
+      color: light-dark(#315b8a, #b9d6f2);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    #network-to-introduction-flow .nd-context-strip svg { width: 15px; height: 15px; flex: 0 0 auto; }
+    #network-to-introduction-flow .nd-chat {
+      display: grid;
+      align-content: start;
+      gap: 9px;
+      padding: 9px 14px;
+    }
+
+    #network-to-introduction-flow .nd-message {
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 17px 17px 17px 5px;
+      background: light-dark(#fff, #24282c);
+      color: light-dark(#293544, #e5e9ed);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    #network-to-introduction-flow .nd-message.nd-mine {
+      justify-self: end;
+      border-radius: 17px 17px 5px 17px;
+      background: light-dark(#315b8a, #86b2df);
+      color: light-dark(#fff, #142437);
+    }
+
+    #network-to-introduction-flow .nd-chat-time {
+      justify-self: center;
+      color: light-dark(#7a838e, #959da6);
+      font-size: 11px;
+    }
+
+    #network-to-introduction-flow .nd-coffee-plan {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin: 7px 14px;
+      padding: 12px;
+      border: 1px solid light-dark(#dfd1c4, #4a392f);
+      border-radius: 17px;
+      background: light-dark(#f0e7df, #382b24);
+    }
+
+    #network-to-introduction-flow .nd-coffee-plan svg { color: light-dark(#a5683a, #d7a47b); }
+    #network-to-introduction-flow .nd-coffee-plan p { margin-top: 3px; color: light-dark(#7d604b, #c9a88e); font-size: 11px; }
+
+    #network-to-introduction-flow .nd-composer {
+      position: absolute;
+      z-index: 10;
+      left: 10px;
+      right: 10px;
+      bottom: 9px;
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      gap: 8px;
+      align-items: end;
+      padding: 8px;
+      border-radius: 24px;
+      background: light-dark(rgba(244,243,240,.92), rgba(29,32,35,.9));
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      backdrop-filter: blur(22px);
+    }
+
+    #network-to-introduction-flow .nd-composer input {
+      height: 44px;
+      min-width: 0;
+      border: 1px solid light-dark(#d8dad6, #34393e);
+      border-radius: 17px;
+      padding: 0 13px;
+      background: light-dark(#fff, #1a1d20);
+      font-size: 16px;
+    }
+
+    #network-to-introduction-flow .nd-composer button {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: light-dark(#203f66, #b9d6f2);
+      color: light-dark(#fff, #162033);
+    }
+
+    #network-to-introduction-flow .nd-feedback-list { display: grid; gap: 10px; margin-top: 21px; }
+    #network-to-introduction-flow .nd-feedback {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 36px 1fr 20px;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 17px;
+      padding: 10px 13px;
+      background: light-dark(#fff, #1a1d20);
+      text-align: left;
+    }
+
+    #network-to-introduction-flow .nd-feedback[aria-pressed="true"] {
+      border-color: light-dark(#315b8a, #86b2df);
+      background: light-dark(#e9eef3, #203141);
+    }
+
+    #network-to-introduction-flow .nd-feedback svg:first-child { color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-introduction-flow .nd-feedback svg:last-child { opacity: 0; color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-introduction-flow .nd-feedback[aria-pressed="true"] svg:last-child { opacity: 1; }
+    #network-to-introduction-flow .nd-feedback small { display: block; margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+    #network-to-introduction-flow .nd-feedback-next:disabled { opacity: .42; cursor: default; }
+
+    #network-to-introduction-flow .nd-connection-card {
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 22px;
+      background: light-dark(#fff, #1a1d20);
+      text-align: left;
+    }
+
+    #network-to-introduction-flow .nd-connection-card > div:first-child { display: flex; align-items: center; gap: 13px; }
+    #network-to-introduction-flow .nd-connection-card p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 12px; }
+    #network-to-introduction-flow .nd-connection-meta { margin-top: 15px; padding-top: 13px; border-top: 1px solid light-dark(#e1e2de, #30353a); color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.45; }
+
+    #network-to-introduction-flow .nd-list { display: grid; margin-top: 12px; }
+    #network-to-introduction-flow .nd-row {
+      width: 100%;
+      min-height: 71px;
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr) 20px;
+      gap: 12px;
+      align-items: center;
+      border: 0;
+      border-bottom: 1px solid light-dark(#e1e2de, #30353a);
+      padding: 10px 0;
+      background: transparent;
+      text-align: left;
+    }
+
+    #network-to-introduction-flow .nd-row .nd-avatar { width: 46px; height: 46px; }
+    #network-to-introduction-flow .nd-row > svg { color: light-dark(#8a929c, #8e969e); }
+
+    #network-to-introduction-flow .nd-profile-card {
+      margin-top: 14px;
+      padding: 18px;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 22px;
+      background: light-dark(#fff, #1a1d20);
+    }
+
+    #network-to-introduction-flow .nd-profile-card > div:first-child { display: flex; align-items: center; gap: 14px; }
+    #network-to-introduction-flow .nd-profile-copy .nd-verified { margin-top: 5px; }
+    #network-to-introduction-flow .nd-profile-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid light-dark(#e1e2de, #30353a); }
+    #network-to-introduction-flow .nd-profile-section p { margin-top: 6px; color: light-dark(#5f6976, #aeb6bf); font-size: 12px; line-height: 1.42; }
+
+    #network-to-introduction-flow .nd-sheet {
+      position: absolute;
+      z-index: 30;
+      inset: 0;
+      display: none;
+      align-items: end;
+      background: rgba(7, 10, 13, .38);
+    }
+
+    #network-to-introduction-flow .nd-sheet.is-open { display: flex; }
+    #network-to-introduction-flow .nd-sheet-panel {
+      width: 100%;
+      min-height: 495px;
+      padding: 9px 18px 24px;
+      border-radius: 30px 30px 0 0;
+      background: light-dark(#f6f5f2, #1a1d20);
+      box-shadow: 0 -18px 50px rgba(0,0,0,.18);
+    }
+
+    #network-to-introduction-flow .nd-grabber { width: 42px; height: 5px; margin: 0 auto 18px; border-radius: 3px; background: light-dark(#c7c9c6, #4a4f54); }
+    #network-to-introduction-flow .nd-field-label { display: block; margin: 18px 0 8px; font-size: 13px; font-weight: 500; }
+    #network-to-introduction-flow .nd-options { display: grid; gap: 8px; }
+    #network-to-introduction-flow .nd-options.nd-three { grid-template-columns: repeat(3, 1fr); }
+    #network-to-introduction-flow .nd-option {
+      min-height: 46px;
+      border: 1px solid light-dark(#dfe0dd, #34393e);
+      border-radius: 15px;
+      padding: 0 11px;
+      background: light-dark(#fff, #24282c);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #network-to-introduction-flow .nd-option[aria-pressed="true"] {
+      border-color: light-dark(#315b8a, #86b2df);
+      background: light-dark(#e5edf4, #203141);
+      color: light-dark(#203f66, #b9d6f2);
+    }
+
+    #network-to-introduction-flow .nd-expiry {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-top: 14px;
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    #network-to-introduction-flow .nd-expiry svg { width: 14px; height: 14px; flex: 0 0 auto; }
+    #network-to-introduction-flow .nd-sheet-actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 9px; margin-top: 20px; }
+
+    #network-to-introduction-flow .nd-toast {
+      position: absolute;
+      z-index: 40;
+      left: 50%;
+      bottom: 94px;
+      max-width: calc(100% - 44px);
+      padding: 10px 15px;
+      transform: translate(-50%, 18px);
+      border-radius: 17px;
+      background: light-dark(rgba(22,32,51,.94), rgba(245,247,250,.94));
+      color: light-dark(#fff, #162033);
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      backdrop-filter: blur(18px);
+    }
+
+    #network-to-introduction-flow .nd-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 360px) {
+      #network-to-introduction-flow { height: 626px; }
+      #network-to-introduction-flow .nd-phone { height: 754px; border-radius: 40px; }
+      #network-to-introduction-flow .nd-stage { height: 693px; padding-inline: 14px; }
+      #network-to-introduction-flow .nd-intro-ready { min-height: 270px; margin-top: 13px; padding: 20px; }
+      #network-to-introduction-flow .nd-intro-ready h2 { font-size: 24px; }
+      #network-to-introduction-flow .nd-intro-ready .nd-primary { left: 20px; }
+      #network-to-introduction-flow .nd-person-head { margin-bottom: 12px; }
+      #network-to-introduction-flow .nd-value-block { padding: 12px 0; }
+      #network-to-introduction-flow .nd-value-block p { font-size: 11px; }
+      #network-to-introduction-flow .nd-chat-stage { padding-inline: 0; }
+      #network-to-introduction-flow .nd-sheet-panel { min-height: 465px; }
+    }
+
+    /* Warm, mobile-native direction: personal, calm, and built around meeting. */
+    #network-to-introduction-flow { color: light-dark(#292821, #f5f0e8); }
+    #network-to-introduction-flow .nd-phone {
+      border-width: 5px;
+      border-color: light-dark(#30312d, #55554f);
+      background: light-dark(#f8f4ee, #171815);
+      box-shadow: 0 22px 56px light-dark(rgba(73,60,46,.16), rgba(0,0,0,.46));
+    }
+    #network-to-introduction-flow h1,
+    #network-to-introduction-flow h2,
+    #network-to-introduction-flow h3,
+    #network-to-introduction-flow button,
+    #network-to-introduction-flow strong,
+    #network-to-introduction-flow .nd-status { font-weight: 500; }
+    #network-to-introduction-flow .nd-eyebrow {
+      color: light-dark(#6d7168, #bcbcb3);
+      font-weight: 500;
+      letter-spacing: .015em;
+      text-transform: none;
+    }
+    #network-to-introduction-flow button:focus-visible,
+    #network-to-introduction-flow input:focus-visible,
+    #network-to-introduction-flow textarea:focus-visible { outline-color: light-dark(#a85f45, #e0a68d); }
+    #network-to-introduction-flow .nd-back,
+    #network-to-introduction-flow .nd-icon { background: light-dark(#eee8df, #282923); color: light-dark(#4d5d50, #cbd6ca); }
+    #network-to-introduction-flow .nd-avatar { background: light-dark(#e7eee6, #28362c); color: light-dark(#516b57, #bfd2c1); font-weight: 500; }
+    #network-to-introduction-flow .nd-avatar.nd-self { background: light-dark(#efe1d6, #422f28); color: light-dark(#8a5139, #e3aa91); }
+    #network-to-introduction-flow .nd-intro-ready {
+      border-color: transparent;
+      background:
+        radial-gradient(circle at 84% 10%, light-dark(rgba(255,255,255,.82), rgba(255,255,255,.10)) 0 8%, transparent 30%),
+        linear-gradient(145deg, light-dark(#f0e1d5, #3b2b24), light-dark(#e3ece3, #243229));
+      box-shadow: inset 0 0 0 1px light-dark(rgba(112,93,71,.08), rgba(255,255,255,.06));
+    }
+    #network-to-introduction-flow .nd-intro-ready::after { border-color: light-dark(rgba(94,119,96,.10), rgba(174,203,177,.10)); }
+    #network-to-introduction-flow .nd-intro-ready p,
+    #network-to-introduction-flow .nd-availability p,
+    #network-to-introduction-flow .nd-row p,
+    #network-to-introduction-flow .nd-profile-copy p,
+    #network-to-introduction-flow .nd-role,
+    #network-to-introduction-flow .nd-value-block p,
+    #network-to-introduction-flow .nd-centred > p,
+    #network-to-introduction-flow .nd-feedback small,
+    #network-to-introduction-flow .nd-connection-card p,
+    #network-to-introduction-flow .nd-connection-meta,
+    #network-to-introduction-flow .nd-profile-section p { color: light-dark(#66665e, #bbb8af); }
+    #network-to-introduction-flow .nd-seal { background: light-dark(#bd7053, #dc967a); color: light-dark(#fffaf4, #2d1811); }
+    #network-to-introduction-flow .nd-primary { background: light-dark(#354c3d, #bfd3c1); color: light-dark(#fffdf8, #1d2b21); }
+    #network-to-introduction-flow .nd-secondary { background: light-dark(#eee8df, #292a25); color: light-dark(#4b4a43, #ece8df); }
+    #network-to-introduction-flow .nd-text-action,
+    #network-to-introduction-flow .nd-small-action { color: light-dark(#4f6855, #bad0bd); }
+    #network-to-introduction-flow .nd-small-action { background: light-dark(#e7eee6, #28362c); }
+    #network-to-introduction-flow .nd-availability,
+    #network-to-introduction-flow .nd-mutual-person,
+    #network-to-introduction-flow .nd-connection-card,
+    #network-to-introduction-flow .nd-profile-card {
+      border-color: light-dark(#e4dbd0, #3a3b35);
+      background: light-dark(#fffdf9, #20211d);
+    }
+    #network-to-introduction-flow .nd-availability-icon { background: light-dark(#f1dfd3, #402d25); color: light-dark(#a65f43, #e0a68d); }
+    #network-to-introduction-flow .nd-tabbar {
+      border-color: light-dark(#e5ddd3, #393a34);
+      background: light-dark(rgba(255,252,247,.96), rgba(32,33,29,.96));
+      box-shadow: 0 8px 26px light-dark(rgba(74,58,43,.12), rgba(0,0,0,.30));
+      backdrop-filter: blur(18px);
+    }
+    #network-to-introduction-flow .nd-tab { color: light-dark(#76766d, #aaa89f); font-weight: 500; }
+    #network-to-introduction-flow .nd-tab.is-active { background: light-dark(#e7eee6, #29382e); color: light-dark(#3e5946, #c7dac9); }
+    #network-to-introduction-flow .nd-verified { color: light-dark(#56705b, #b8ceb9); font-weight: 500; }
+    #network-to-introduction-flow .nd-topic { background: light-dark(#eee9e1, #292a25); color: light-dark(#575750, #cbc8bf); font-weight: 500; }
+    #network-to-introduction-flow .nd-reciprocal,
+    #network-to-introduction-flow .nd-value-block,
+    #network-to-introduction-flow .nd-chat-head,
+    #network-to-introduction-flow .nd-row,
+    #network-to-introduction-flow .nd-profile-section { border-color: light-dark(#e6ddd2, #383933); }
+    #network-to-introduction-flow .nd-value-icon,
+    #network-to-introduction-flow .nd-state-icon { background: light-dark(#e7eee6, #28362c); color: light-dark(#56705b, #b8ceb9); }
+    #network-to-introduction-flow .nd-meeting-strip,
+    #network-to-introduction-flow .nd-coffee-plan { border-color: light-dark(#ead3c5, #4b362d); background: light-dark(#f2e2d7, #3e2d26); color: light-dark(#7b4934, #e5ad94); }
+    #network-to-introduction-flow .nd-meeting-strip p,
+    #network-to-introduction-flow .nd-coffee-plan p { color: light-dark(#765747, #cfad9c); }
+    #network-to-introduction-flow .nd-response-bar,
+    #network-to-introduction-flow .nd-bottom-bar,
+    #network-to-introduction-flow .nd-composer {
+      border-color: light-dark(#e7ded3, #393a34);
+      background: light-dark(rgba(255,252,247,.96), rgba(32,33,29,.96));
+      box-shadow: 0 9px 28px light-dark(rgba(74,58,43,.13), rgba(0,0,0,.30));
+      backdrop-filter: blur(18px);
+    }
+    #network-to-introduction-flow .nd-private-note { color: light-dark(#56705b, #b8ceb9); }
+    #network-to-introduction-flow .nd-notification { border-color: light-dark(#eadfd4, #3d3d36); background: light-dark(rgba(255,252,247,.97), rgba(35,36,31,.97)); }
+    #network-to-introduction-flow .nd-context-strip { background: light-dark(#e7eee6, #28362c); color: light-dark(#48624f, #c5d8c7); }
+    #network-to-introduction-flow .nd-message { background: light-dark(#fffdf9, #292a25); color: light-dark(#34332e, #ece8df); }
+    #network-to-introduction-flow .nd-message.nd-mine { background: light-dark(#526b57, #b7ceb9); color: light-dark(#fffdf8, #1d2b21); }
+    #network-to-introduction-flow .nd-composer input,
+    #network-to-introduction-flow .nd-option,
+    #network-to-introduction-flow .nd-feedback { border-color: light-dark(#e3dbd0, #3a3b35); background: light-dark(#fffdf9, #20211d); }
+    #network-to-introduction-flow .nd-composer button { background: light-dark(#354c3d, #bfd3c1); color: light-dark(#fffdf8, #1d2b21); }
+    #network-to-introduction-flow .nd-feedback[aria-pressed="true"],
+    #network-to-introduction-flow .nd-option[aria-pressed="true"] { border-color: light-dark(#aab7a9, #758d78); background: light-dark(#e5ece4, #29382e); color: light-dark(#344c3a, #d3e2d4); }
+    #network-to-introduction-flow .nd-sheet-panel { background: light-dark(#f8f4ee, #20211d); }
+    #network-to-introduction-flow .nd-toast { background: light-dark(rgba(47,53,46,.96), rgba(237,232,223,.96)); color: light-dark(#fffdf8, #24251f); }
+
+    @media (prefers-reduced-motion: reduce) {
+      #network-to-introduction-flow .nd-notification,
+      #network-to-introduction-flow .nd-toast { transition: none; }
+    }
+  </style>
+
+  <section class="nd-phone">
+    <div class="nd-island" aria-hidden="true"></div>
+    <div class="nd-status" aria-hidden="true"><span>9:41</span><span><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+    <main>
+      <section class="nd-stage is-active" data-stage="today" aria-label="Today">
+        <div class="nd-topbar"><div><span class="nd-eyebrow">Sunday, August 30</span><h1>Today</h1></div><button class="nd-avatar nd-self" type="button" data-stage-target="profile" aria-label="Open profile">MT</button></div>
+        <article class="nd-intro-ready">
+          <div class="nd-seal"><i data-lucide="arrow-left-right" aria-hidden="true"></i></div>
+          <span class="nd-eyebrow">A new introduction</span>
+          <h2>A thoughtful intro, just for you.</h2>
+          <p>There’s a genuine reason for both of you to talk—and coffee should be easy to arrange.</p>
+          <button class="nd-primary" type="button" data-stage-target="introduction">View introduction</button>
+        </article>
+        <article class="nd-availability" id="nd-availability-card">
+          <div class="nd-availability-icon"><i data-lucide="coffee" aria-hidden="true"></i></div>
+          <div><h3 id="nd-availability-title">Free for coffee today?</h3><p id="nd-availability-detail">Share a broad area and time.</p></div>
+          <button class="nd-small-action" type="button" data-open-sheet>Set</button>
+        </article>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="introduction" aria-label="Professional introduction">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="today" aria-label="Back to Today"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span class="nd-eyebrow">Introduction</span><button class="nd-icon" type="button" data-toast="Introduction options" aria-label="Introduction options"><i data-lucide="ellipsis" aria-hidden="true"></i></button></div>
+        <div class="nd-person-head">
+          <div class="nd-avatar nd-large">SC</div>
+          <div><h1>Sarah Chen</h1><p class="nd-role">Staff Software Engineer at Northstar AI</p><span class="nd-verified"><i data-lucide="badge-check" aria-hidden="true"></i>Work identity confirmed</span></div>
+        </div>
+        <div class="nd-topics"><span class="nd-topic">ML infrastructure</span><span class="nd-topic">Distributed systems</span><span class="nd-topic">AI systems</span></div>
+        <div class="nd-reciprocal">
+          <section class="nd-value-block"><div class="nd-value-icon"><i data-lucide="arrow-up-right" aria-hidden="true"></i></div><div><h3>Why you should meet</h3><p>Sarah builds large-scale inference systems. Her perspective could help you understand how frontier AI infrastructure teams operate.</p></div></section>
+          <section class="nd-value-block"><div class="nd-value-icon"><i data-lucide="hand" aria-hidden="true"></i></div><div><h3>Why Sarah may want to meet you</h3><p>Your experience running distributed systems at global scale could be useful as her team grows its platform.</p></div></section>
+        </div>
+        <div class="nd-meeting-strip"><i data-lucide="coffee" aria-hidden="true"></i><div><h3>Easy to meet this week</h3><p>You both work around Downtown Toronto and prefer weekday coffee chats.</p></div></div>
+        <div class="nd-response-bar"><button class="nd-secondary" type="button" data-stage-target="passed">Pass</button><button class="nd-primary" type="button" data-stage-target="waiting">Interested</button></div>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="waiting" aria-label="Interest recorded privately">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="today" aria-label="Back to Today"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span></span><span style="width:44px" aria-hidden="true"></span></div>
+        <div class="nd-centred"><div class="nd-state-icon"><i data-lucide="lock-keyhole" aria-hidden="true"></i></div><h1>Your interest stays private.</h1><p>We’ll let you know only if Sarah feels the same. Until then, neither response is shared.</p><span class="nd-private-note"><i data-lucide="shield-check" aria-hidden="true"></i>No awkward rejection notification</span></div>
+        <button class="nd-notification" type="button" data-stage-target="mutual" aria-label="Open mutual interest update" hidden><div class="nd-seal"><i data-lucide="user-round-check" aria-hidden="true"></i></div><div><h3>You’re both interested</h3><p>Tap to start a conversation with Sarah.</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="passed" aria-label="Introduction passed">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="today" aria-label="Back to Today"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span></span><span style="width:44px" aria-hidden="true"></span></div>
+        <div class="nd-centred"><div class="nd-state-icon"><i data-lucide="circle-minus" aria-hidden="true"></i></div><h1>Introduction closed.</h1><p>Sarah won’t be notified. We’ll keep looking for someone worthwhile—there’s nothing else you need to do.</p></div>
+        <div class="nd-bottom-bar"><button class="nd-primary" type="button" data-stage-target="today">Done</button></div>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="mutual" aria-label="Mutual interest">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="today" aria-label="Back to Today"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span></span><span style="width:44px" aria-hidden="true"></span></div>
+        <div class="nd-centred"><div class="nd-state-icon nd-success"><i data-lucide="user-round-check" aria-hidden="true"></i></div><h1>You’re both interested.</h1><p>Start a private conversation and find a convenient time for a short coffee chat.</p><div class="nd-mutual-person"><div class="nd-avatar">SC</div><div><h3>Sarah Chen</h3><p>Staff Software Engineer at Northstar AI</p></div></div></div>
+        <div class="nd-bottom-bar"><button class="nd-primary" type="button" data-stage-target="chat">Start conversation</button></div>
+      </section>
+
+      <section class="nd-stage nd-chat-stage" data-stage="chat" aria-label="Conversation with Sarah Chen">
+        <header class="nd-chat-head"><button class="nd-back" type="button" data-stage-target="messages" aria-label="Back to Messages"><i data-lucide="chevron-left" aria-hidden="true"></i></button><div class="nd-chat-identity"><h3>Sarah Chen</h3><p>Staff Engineer · Northstar AI ✓</p></div><button class="nd-icon" type="button" data-toast="Conversation details" aria-label="Conversation details"><i data-lucide="ellipsis" aria-hidden="true"></i></button></header>
+        <div class="nd-context-strip"><i data-lucide="arrow-left-right" aria-hidden="true"></i><span>Introduced for complementary experience in AI infrastructure and distributed systems.</span></div>
+        <div class="nd-chat" aria-live="polite">
+          <span class="nd-chat-time">Today, 10:18 AM</span>
+          <div class="nd-message">Hi Mesbah — great to connect. I’d enjoy comparing notes on scaling infrastructure teams.</div>
+          <div class="nd-message nd-mine">Likewise. Are you around downtown Tuesday at lunch for a quick coffee?</div>
+          <div class="nd-message">Yes—12:30 near King and Spadina works well.</div>
+        </div>
+        <article class="nd-coffee-plan"><i data-lucide="coffee" aria-hidden="true"></i><div><h3>Coffee chat planned</h3><p>Tuesday · 12:30 PM · King &amp; Spadina area</p></div></article>
+        <button class="nd-small-action" type="button" data-stage-target="feedback" style="margin:10px 14px">We met — share feedback</button>
+        <form class="nd-composer"><label class="sr-only" for="nd-message-input">Message Sarah</label><input id="nd-message-input" type="text" placeholder="Message Sarah"><button type="submit" aria-label="Send message"><i data-lucide="arrow-up" aria-hidden="true"></i></button></form>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="feedback" aria-label="Private meetup feedback">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="chat" aria-label="Back to conversation"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span class="nd-eyebrow">Private feedback</span><span style="width:44px" aria-hidden="true"></span></div>
+        <h1>How did it go?</h1><p style="margin-top:8px;color:light-dark(#68717d,#a7afb8);font-size:13px;line-height:1.4">Your response is private and helps improve future introductions.</p>
+        <div class="nd-feedback-list">
+          <button class="nd-feedback" type="button" aria-pressed="false" data-feedback="great"><i data-lucide="sun" aria-hidden="true"></i><span><strong>Great connection</strong><small>I’m glad we met</small></span><i data-lucide="check" aria-hidden="true"></i></button>
+          <button class="nd-feedback" type="button" aria-pressed="false" data-feedback="good"><i data-lucide="message-circle" aria-hidden="true"></i><span><strong>Good conversation</strong><small>Useful and worth staying connected</small></span><i data-lucide="check" aria-hidden="true"></i></button>
+          <button class="nd-feedback" type="button" aria-pressed="false" data-feedback="weak"><i data-lucide="minus" aria-hidden="true"></i><span><strong>Didn’t really connect</strong><small>Not the right professional fit</small></span><i data-lucide="check" aria-hidden="true"></i></button>
+          <button class="nd-feedback" type="button" aria-pressed="false" data-feedback="no-meet"><i data-lucide="calendar-x" aria-hidden="true"></i><span><strong>Didn’t meet</strong><small>The coffee chat didn’t happen</small></span><i data-lucide="check" aria-hidden="true"></i></button>
+        </div>
+        <div class="nd-bottom-bar"><button class="nd-primary nd-feedback-next" type="button" disabled data-stage-target="connection">Continue</button></div>
+      </section>
+
+      <section class="nd-stage nd-deep" data-stage="connection" aria-label="Professional connection created">
+        <div class="nd-topbar"><button class="nd-back" type="button" data-stage-target="connections" aria-label="Back to Connections"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span></span><span style="width:44px" aria-hidden="true"></span></div>
+        <div class="nd-centred"><div class="nd-state-icon nd-success"><i data-lucide="users-round" aria-hidden="true"></i></div><h1>You made a real connection.</h1><p>Sarah is now part of your network because you met—not because either of you clicked Connect.</p><article class="nd-connection-card"><div><div class="nd-avatar">SC</div><div><h3>Sarah Chen</h3><p>Staff Software Engineer at Northstar AI</p></div></div><div class="nd-connection-meta">Met over coffee · September 1, 2026<br>Introduced through AI infrastructure and distributed systems</div></article></div>
+        <div class="nd-bottom-bar"><button class="nd-primary" type="button" data-stage-target="connections">View Connections</button></div>
+      </section>
+
+      <section class="nd-stage" data-stage="connections" aria-label="Connections">
+        <div class="nd-topbar"><div><span class="nd-eyebrow">Your real network</span><h1>Connections</h1></div><button class="nd-icon" type="button" data-toast="Connection filters" aria-label="Filter connections"><i data-lucide="sliders-horizontal" aria-hidden="true"></i></button></div>
+        <div class="nd-list">
+          <button class="nd-row" type="button" data-toast="Sarah’s connection details"><div class="nd-avatar">SC</div><div><h3>Sarah Chen</h3><p>Northstar AI · Met over coffee Sep 1</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+          <button class="nd-row" type="button" data-toast="Daniel’s connection details"><div class="nd-avatar nd-self">DP</div><div><h3>Daniel Park</h3><p>Shopify · Connected July 18</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+          <button class="nd-row" type="button" data-toast="Priya’s connection details"><div class="nd-avatar">PS</div><div><h3>Priya Shah</h3><p>Waabi · Connected June 7</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+        </div>
+      </section>
+
+      <section class="nd-stage" data-stage="messages" aria-label="Messages">
+        <div class="nd-topbar"><div><span class="nd-eyebrow">Mutual introductions only</span><h1>Messages</h1></div><span style="width:44px" aria-hidden="true"></span></div>
+        <div class="nd-list">
+          <button class="nd-row" type="button" data-stage-target="chat"><div class="nd-avatar">SC</div><div><h3>Sarah Chen</h3><p>Coffee Tuesday at 12:30 works well.</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+          <button class="nd-row" type="button" data-toast="Open Daniel conversation"><div class="nd-avatar nd-self">DP</div><div><h3>Daniel Park</h3><p>Thanks again—great conversation.</p></div><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+        </div>
+      </section>
+
+      <section class="nd-stage" data-stage="profile" aria-label="Professional profile">
+        <div class="nd-topbar"><div><span class="nd-eyebrow">Professional identity</span><h1>Profile</h1></div><button class="nd-icon" type="button" data-toast="Settings" aria-label="Settings"><i data-lucide="settings" aria-hidden="true"></i></button></div>
+        <article class="nd-profile-card">
+          <div><div class="nd-avatar nd-large nd-self">MT</div><div class="nd-profile-copy"><h2>Mesbah Tanvir</h2><p>Software Engineer at Meta</p><span class="nd-verified"><i data-lucide="badge-check" aria-hidden="true"></i>Work email verified</span></div></div>
+          <section class="nd-profile-section"><h3>Where I’m growing</h3><p>AI infrastructure, technical leadership, and early-stage products.</p></section>
+          <section class="nd-profile-section"><h3>What I can share</h3><p>Distributed systems, engineering at scale, and platform reliability.</p></section>
+          <section class="nd-profile-section"><h3>Meeting preferences</h3><p>Downtown Toronto · Weekday coffee chats · Weekly introductions</p></section>
+        </article>
+      </section>
+    </main>
+
+    <nav class="nd-tabbar" aria-label="Primary navigation">
+      <button class="nd-tab is-active" type="button" data-tab="today" aria-current="page"><i data-lucide="sun" aria-hidden="true"></i><span>Today</span></button>
+      <button class="nd-tab" type="button" data-tab="connections"><i data-lucide="users" aria-hidden="true"></i><span>Connections</span></button>
+      <button class="nd-tab" type="button" data-tab="messages"><i data-lucide="message-circle" aria-hidden="true"></i><span>Messages</span></button>
+      <button class="nd-tab" type="button" data-tab="profile"><i data-lucide="user-round" aria-hidden="true"></i><span>Profile</span></button>
+    </nav>
+
+    <div class="nd-sheet" role="dialog" aria-modal="true" aria-labelledby="nd-availability-heading" aria-hidden="true" hidden>
+      <section class="nd-sheet-panel">
+        <div class="nd-grabber" aria-hidden="true"></div><h2 id="nd-availability-heading">Available today</h2><p style="margin-top:6px;color:light-dark(#68717d,#a7afb8);font-size:13px">Share broad meeting context for today only.</p>
+        <span class="nd-field-label">Area</span>
+        <div class="nd-options"><button class="nd-option" type="button" aria-pressed="true" data-option-group="area" data-option-value="Financial District">Financial District</button><button class="nd-option" type="button" aria-pressed="false" data-option-group="area" data-option-value="King West">King West</button><button class="nd-option" type="button" aria-pressed="false" data-option-group="area" data-option-value="Downtown Toronto">Downtown Toronto</button></div>
+        <span class="nd-field-label">Time</span>
+        <div class="nd-options nd-three"><button class="nd-option" type="button" aria-pressed="true" data-option-group="time" data-option-value="Lunch">Lunch</button><button class="nd-option" type="button" aria-pressed="false" data-option-group="time" data-option-value="Afternoon">Afternoon</button><button class="nd-option" type="button" aria-pressed="false" data-option-group="time" data-option-value="After work">After work</button></div>
+        <p class="nd-expiry"><i data-lucide="clock" aria-hidden="true"></i>This expires automatically at the end of the selected window. Your precise location is never shared.</p>
+        <div class="nd-sheet-actions"><button class="nd-secondary" type="button" data-close-sheet>Cancel</button><button class="nd-primary" type="button" data-activate-availability>Turn on</button></div>
+      </section>
+    </div>
+    <div class="nd-toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('network-to-introduction-flow');
+      const stages = [...root.querySelectorAll('[data-stage]')];
+      const tabs = [...root.querySelectorAll('[data-tab]')];
+      const tabbar = root.querySelector('.nd-tabbar');
+      const sheet = root.querySelector('.nd-sheet');
+      const notification = root.querySelector('.nd-notification');
+      const toast = root.querySelector('.nd-toast');
+      const composer = root.querySelector('.nd-composer');
+      const messageInput = root.querySelector('#nd-message-input');
+      const chat = root.querySelector('.nd-chat');
+      const feedbackNext = root.querySelector('.nd-feedback-next');
+      const main = root.querySelector('main');
+      const sheetTrigger = root.querySelector('[data-open-sheet]');
+      let toastTimer;
+      let notificationTimer;
+
+      const tabStages = new Set(['today', 'connections', 'messages', 'profile']);
+
+      function showStage(name, moveFocus = true) {
+        let activeStage;
+        stages.forEach((stage) => {
+          const active = stage.dataset.stage === name;
+          stage.classList.toggle('is-active', active);
+          stage.hidden = !active;
+          if (active) activeStage = stage;
+        });
+        const isTab = tabStages.has(name);
+        tabbar.style.display = isTab ? 'grid' : 'none';
+        tabs.forEach((tab) => {
+          const active = tab.dataset.tab === name;
+          tab.classList.toggle('is-active', active);
+          if (active) tab.setAttribute('aria-current', 'page');
+          else tab.removeAttribute('aria-current');
+        });
+        clearTimeout(notificationTimer);
+        notification.classList.remove('is-visible');
+        notification.hidden = true;
+        if (name === 'waiting') notificationTimer = setTimeout(() => {
+          notification.hidden = false;
+          notification.classList.add('is-visible');
+        }, 900);
+        if (moveFocus && activeStage) {
+          const focusTarget = activeStage.querySelector('button:not([disabled]), input:not([disabled]), textarea:not([disabled])');
+          if (focusTarget) focusTarget.focus();
+        }
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 1500);
+      }
+
+      root.querySelectorAll('[data-stage-target]').forEach((button) => button.addEventListener('click', () => showStage(button.dataset.stageTarget)));
+      tabs.forEach((tab) => tab.addEventListener('click', () => showStage(tab.dataset.tab)));
+      root.querySelectorAll('[data-toast]').forEach((button) => button.addEventListener('click', () => showToast(button.dataset.toast)));
+
+      function openSheet() {
+        sheet.hidden = false;
+        sheet.classList.add('is-open');
+        sheet.setAttribute('aria-hidden', 'false');
+        main.inert = true;
+        tabbar.inert = true;
+        sheet.querySelector('button').focus();
+      }
+
+      function closeSheet() {
+        sheet.classList.remove('is-open');
+        sheet.setAttribute('aria-hidden', 'true');
+        sheet.hidden = true;
+        main.inert = false;
+        tabbar.inert = false;
+        sheetTrigger.focus();
+      }
+
+      sheetTrigger.addEventListener('click', openSheet);
+      root.querySelector('[data-close-sheet]').addEventListener('click', closeSheet);
+      sheet.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeSheet();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const controls = [...sheet.querySelectorAll('button:not([disabled])')];
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      });
+
+      root.querySelectorAll('[data-option-group]').forEach((option) => option.addEventListener('click', () => {
+        root.querySelectorAll(`[data-option-group="${option.dataset.optionGroup}"]`).forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        option.setAttribute('aria-pressed', 'true');
+      }));
+
+      root.querySelector('[data-activate-availability]').addEventListener('click', () => {
+        const area = root.querySelector('[data-option-group="area"][aria-pressed="true"]').dataset.optionValue;
+        const time = root.querySelector('[data-option-group="time"][aria-pressed="true"]').dataset.optionValue;
+        root.querySelector('#nd-availability-title').textContent = 'Available today — on';
+        root.querySelector('#nd-availability-detail').textContent = `${area} · ${time} · expires automatically`;
+        root.querySelector('[data-open-sheet]').textContent = 'Change';
+        closeSheet();
+        showToast('Available Today is on');
+      });
+
+      root.querySelectorAll('[data-feedback]').forEach((button) => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-feedback]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        feedbackNext.disabled = false;
+        feedbackNext.dataset.stageTarget = button.dataset.feedback === 'no-meet' ? 'today' : 'connection';
+      }));
+
+      composer.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const value = messageInput.value.trim();
+        if (!value) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'nd-message nd-mine';
+        bubble.textContent = value;
+        chat.appendChild(bubble);
+        messageInput.value = '';
+      });
+
+      showStage('today', false);
+    })();
+  </script>
+</div>

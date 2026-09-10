@@ -1,0 +1,60 @@
+{
+  "identifier" : "CF96B14D-373D-4D96-92A8-92B47853A81D",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "network-to-local",
+    "_developerTeamID" : "6Z4KNLU26A",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "4D2314B9-90D8-4AAB-8547-B497E3F36D59",
+      "localizations" : [
+
+      ],
+      "name" : "network.to membership",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A47CE36C-7EBD-49F4-B4A9-B07FD8E46604",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Thoughtful professional introductions across companies and industries.",
+              "displayName" : "Monthly membership",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.mesbahtanvir.networkto.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly Membership",
+          "subscriptionGroupID" : "4D2314B9-90D8-4AAB-8547-B497E3F36D59",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

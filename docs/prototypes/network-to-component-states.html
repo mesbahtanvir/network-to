@@ -1,0 +1,516 @@
+<div id="network-to-component-states" role="region" aria-label="Interactive network.to component and state sheet">
+  <style>
+    #network-to-component-states {
+      color-scheme: light dark;
+      width: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+      color: light-dark(#162033, #f5f7fa);
+    }
+
+    #network-to-component-states * { box-sizing: border-box; }
+    #network-to-component-states [hidden] { display: none !important; }
+
+    #network-to-component-states .ns-board {
+      overflow: hidden;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 28px;
+      background: light-dark(#f6f5f2, #111315);
+      box-shadow: 0 20px 60px light-dark(rgba(38,47,61,.12), rgba(0,0,0,.4));
+    }
+
+    #network-to-component-states .ns-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 21px 22px 15px;
+      border-bottom: 1px solid light-dark(#e1e2de, #30353a);
+    }
+
+    #network-to-component-states h1,
+    #network-to-component-states h2,
+    #network-to-component-states h3,
+    #network-to-component-states p { margin: 0; }
+
+    #network-to-component-states h1 { font-size: 27px; line-height: 1.1; font-weight: 500; letter-spacing: -.03em; }
+    #network-to-component-states h2 { font-size: 19px; line-height: 1.15; font-weight: 500; letter-spacing: -.02em; }
+    #network-to-component-states h3 { font-size: 15px; line-height: 1.2; font-weight: 500; }
+    #network-to-component-states .ns-head p { margin-top: 5px; color: light-dark(#68717d, #a7afb8); font-size: 12px; }
+
+    #network-to-component-states .ns-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      background: light-dark(#203f66, #b9d6f2);
+      color: light-dark(#fff, #162033);
+    }
+
+    #network-to-component-states .ns-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 13px;
+      border-bottom: 1px solid light-dark(#e1e2de, #30353a);
+    }
+    #network-to-component-states button,
+    #network-to-component-states input { font: inherit; color: inherit; }
+    #network-to-component-states button { cursor: pointer; }
+    #network-to-component-states button:focus-visible,
+    #network-to-component-states input:focus-visible {
+      outline: 3px solid light-dark(#315b8a, #86b2df);
+      outline-offset: 2px;
+    }
+
+    #network-to-component-states .ns-tab {
+      min-height: 44px;
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 13px;
+      padding: 0 12px;
+      background: transparent;
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #network-to-component-states .ns-tab[aria-pressed="true"] { background: light-dark(#e5edf4, #203141); color: light-dark(#203f66, #b9d6f2); }
+
+    #network-to-component-states .ns-category { display: none; padding: 18px; }
+    #network-to-component-states .ns-category.is-active { display: block; }
+    #network-to-component-states .ns-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    #network-to-component-states .ns-panel { min-width: 0; padding: 17px; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 20px; background: light-dark(#fff, #1a1d20); }
+    #network-to-component-states .ns-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+    #network-to-component-states .ns-panel-head p { margin-top: 4px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.35; }
+    #network-to-component-states .ns-code { flex: 0 0 auto; color: light-dark(#68717d, #a7afb8); font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    #network-to-component-states .ns-state-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 13px; }
+    #network-to-component-states .ns-state {
+      min-height: 44px;
+      border: 1px solid light-dark(#dfe0dd, #34393e);
+      border-radius: 12px;
+      padding: 0 10px;
+      background: light-dark(#fff, #24282c);
+      color: light-dark(#596574, #b9c2cb);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #network-to-component-states .ns-state[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e5edf4, #203141); color: light-dark(#203f66, #b9d6f2); }
+
+    #network-to-component-states .ns-identity { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center; padding: 13px; border-radius: 17px; background: light-dark(#f6f5f2, #24282c); }
+    #network-to-component-states .ns-monogram { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; background: light-dark(#e5edf4, #203141); color: light-dark(#315b8a, #9fc5eb); font-size: 15px; font-weight: 500; }
+    #network-to-component-states .ns-identity p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+    #network-to-component-states .ns-verified { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; color: light-dark(#315b8a, #9fc5eb); font-size: 11px; font-weight: 500; }
+    #network-to-component-states .ns-verified svg { width: 13px; height: 13px; }
+    #network-to-component-states .ns-verified.is-pending { color: light-dark(#8a641d, #e0b55c); }
+    #network-to-component-states .ns-verified.is-warning { color: light-dark(#b42332, #ff7a88); }
+
+    #network-to-component-states .ns-disclosure { display: none; gap: 8px; align-items: flex-start; margin-top: 10px; padding: 10px; border-radius: 14px; background: light-dark(#e5edf4, #203141); color: light-dark(#536b83, #a8bfd7); font-size: 11px; line-height: 1.4; }
+    #network-to-component-states .ns-disclosure.is-visible { display: flex; }
+    #network-to-component-states .ns-disclosure svg { flex: 0 0 auto; width: 14px; height: 14px; }
+
+    #network-to-component-states .ns-field-label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 500; }
+    #network-to-component-states .ns-field { width: 100%; height: 44px; border: 1px solid light-dark(#d9dcd8, #34393e); border-radius: 14px; padding: 0 12px; background: light-dark(#fff, #111315); font-size: 16px; }
+    #network-to-component-states .ns-field.is-error { border-color: light-dark(#b42332, #ff7a88); }
+    #network-to-component-states .ns-help { margin-top: 6px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.35; }
+    #network-to-component-states .ns-help.is-error { color: light-dark(#b42332, #ff7a88); }
+
+    #network-to-component-states .ns-topic-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    #network-to-component-states .ns-topic { min-height: 44px; border: 1px solid light-dark(#dfe0dd, #34393e); border-radius: 11px; padding: 0 10px; background: light-dark(#fff, #111315); color: light-dark(#596574, #b9c2cb); font-size: 11px; font-weight: 500; }
+    #network-to-component-states .ns-topic[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e5edf4, #203141); color: light-dark(#203f66, #b9d6f2); }
+
+    #network-to-component-states .ns-value { display: grid; grid-template-columns: 32px 1fr; gap: 10px; padding: 12px 0; border-top: 1px solid light-dark(#e1e2de, #30353a); }
+    #network-to-component-states .ns-value:first-of-type { border-top: 0; }
+    #network-to-component-states .ns-value-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: light-dark(#e5edf4, #203141); color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-component-states .ns-value p { margin-top: 4px; color: light-dark(#5f6976, #aeb6bf); font-size: 11px; line-height: 1.4; }
+
+    #network-to-component-states .ns-meeting { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 11px; border-radius: 15px; background: light-dark(#f0e7df, #382b24); color: light-dark(#6f482c, #e1b896); }
+    #network-to-component-states .ns-meeting p { margin-top: 3px; color: light-dark(#7d604b, #c9a88e); font-size: 11px; }
+
+    #network-to-component-states .ns-actions { display: grid; grid-template-columns: 1fr 1.35fr; gap: 8px; margin-top: 14px; }
+    #network-to-component-states .ns-primary,
+    #network-to-component-states .ns-secondary { min-height: 44px; border: 0; border-radius: 14px; padding: 0 13px; font-size: 12px; font-weight: 500; }
+    #network-to-component-states .ns-primary { background: light-dark(#203f66, #b9d6f2); color: light-dark(#fff, #162033); }
+    #network-to-component-states .ns-secondary { background: light-dark(#ecedea, #24282c); color: light-dark(#344050, #e4e8ec); }
+
+    #network-to-component-states .ns-response-state { min-height: 190px; display: grid; place-items: center; align-content: center; padding: 14px; border-radius: 17px; background: light-dark(#f6f5f2, #24282c); text-align: center; }
+    #network-to-component-states .ns-response-icon { width: 52px; height: 52px; display: grid; place-items: center; margin-bottom: 12px; border-radius: 18px; background: light-dark(#e5edf4, #203141); color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-component-states .ns-response-state p { max-width: 250px; margin-top: 6px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.4; }
+
+    #network-to-component-states .ns-availability { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 17px; background: light-dark(#f6f5f2, #24282c); }
+    #network-to-component-states .ns-availability-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: light-dark(#f0e7df, #382b24); color: light-dark(#a5683a, #d7a47b); }
+    #network-to-component-states .ns-availability p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+    #network-to-component-states .ns-small { min-height: 44px; border: 0; border-radius: 12px; padding: 0 10px; background: light-dark(#ecedea, #30353a); color: light-dark(#315b8a, #9fc5eb); font-size: 11px; font-weight: 500; }
+
+    #network-to-component-states .ns-option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+    #network-to-component-states .ns-option { min-height: 44px; border: 1px solid light-dark(#dfe0dd, #34393e); border-radius: 13px; padding: 0 8px; background: light-dark(#fff, #111315); font-size: 11px; font-weight: 500; }
+    #network-to-component-states .ns-option[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e5edf4, #203141); color: light-dark(#203f66, #b9d6f2); }
+    #network-to-component-states .ns-expiry { display: flex; gap: 6px; align-items: flex-start; margin-top: 10px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.35; }
+    #network-to-component-states .ns-expiry svg { flex: 0 0 auto; width: 13px; height: 13px; }
+
+    #network-to-component-states .ns-context { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border-radius: 14px; background: light-dark(#e5edf4, #203141); color: light-dark(#536b83, #a8bfd7); font-size: 11px; line-height: 1.35; }
+    #network-to-component-states .ns-context svg { flex: 0 0 auto; width: 14px; height: 14px; }
+    #network-to-component-states .ns-chat { display: grid; align-content: start; gap: 7px; min-height: 160px; padding: 12px 0; }
+    #network-to-component-states .ns-bubble { max-width: 78%; padding: 9px 11px; border-radius: 15px 15px 15px 5px; background: light-dark(#f0f1ee, #24282c); color: light-dark(#293544, #e5e9ed); font-size: 11px; line-height: 1.4; }
+    #network-to-component-states .ns-bubble.is-mine { justify-self: end; border-radius: 15px 15px 5px 15px; background: light-dark(#315b8a, #86b2df); color: light-dark(#fff, #142437); }
+    #network-to-component-states .ns-bubble.is-failed { border: 1px solid light-dark(#b42332, #ff7a88); }
+    #network-to-component-states .ns-failed-label { display: none; justify-self: end; color: light-dark(#b42332, #ff7a88); font-size: 11px; }
+    #network-to-component-states .ns-failed-label.is-visible { display: block; }
+    #network-to-component-states .ns-composer { display: grid; grid-template-columns: 1fr 44px; gap: 7px; }
+    #network-to-component-states .ns-composer input { min-width: 0; height: 44px; border: 1px solid light-dark(#d9dcd8, #34393e); border-radius: 14px; padding: 0 11px; background: light-dark(#fff, #111315); font-size: 16px; }
+    #network-to-component-states .ns-composer button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: light-dark(#203f66, #b9d6f2); color: light-dark(#fff, #162033); }
+
+    #network-to-component-states .ns-feedback-list { display: grid; gap: 7px; }
+    #network-to-component-states .ns-feedback { min-height: 48px; display: grid; grid-template-columns: 28px 1fr 16px; gap: 8px; align-items: center; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 14px; padding: 8px 10px; background: light-dark(#fff, #111315); text-align: left; }
+    #network-to-component-states .ns-feedback small { display: block; margin-top: 2px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+    #network-to-component-states .ns-feedback > svg:last-child { opacity: 0; }
+    #network-to-component-states .ns-feedback[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e5edf4, #203141); }
+    #network-to-component-states .ns-feedback[aria-pressed="true"] > svg:last-child { opacity: 1; color: light-dark(#315b8a, #9fc5eb); }
+
+    #network-to-component-states .ns-connection { display: none; min-height: 250px; place-items: center; align-content: center; text-align: center; }
+    #network-to-component-states .ns-connection.is-visible { display: grid; }
+    #network-to-component-states .ns-success-icon { width: 56px; height: 56px; display: grid; place-items: center; margin-bottom: 12px; border-radius: 19px; background: light-dark(#e1efe7, #183126); color: light-dark(#2e7350, #6bc18f); }
+    #network-to-component-states .ns-connection p { max-width: 240px; margin-top: 6px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.4; }
+
+    #network-to-component-states .ns-notice { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 16px; background: light-dark(#e5edf4, #203141); }
+    #network-to-component-states .ns-notice-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: light-dark(#315b8a, #86b2df); color: light-dark(#fff, #142437); }
+    #network-to-component-states .ns-notice p { margin-top: 4px; color: light-dark(#536b83, #a8bfd7); font-size: 11px; line-height: 1.4; }
+    #network-to-component-states .ns-notice.is-offline { background: light-dark(#f5ead5, #3b2f1d); }
+    #network-to-component-states .ns-notice.is-offline .ns-notice-icon { background: light-dark(#8a641d, #e0b55c); color: light-dark(#fff, #21180a); }
+    #network-to-component-states .ns-notice.is-offline p { color: light-dark(#75591f, #d6b76f); }
+    #network-to-component-states .ns-notice.is-safety { background: light-dark(#f5e3e5, #3b2024); }
+    #network-to-component-states .ns-notice.is-safety .ns-notice-icon { background: light-dark(#b42332, #ff7a88); color: light-dark(#fff, #2b0c11); }
+    #network-to-component-states .ns-notice.is-safety p { color: light-dark(#7d3038, #e6a3aa); }
+
+    #network-to-component-states .ns-safety-actions { display: grid; gap: 7px; margin-top: 12px; }
+    #network-to-component-states .ns-safety-action { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 13px; padding: 0 12px; background: light-dark(#f0f1ee, #24282c); text-align: left; font-size: 11px; font-weight: 500; }
+    #network-to-component-states .ns-safety-action.is-destructive { color: light-dark(#b42332, #ff7a88); }
+
+    #network-to-component-states .ns-live { margin-top: 11px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+
+    /* Warm, human component language shared by the mobile experience. */
+    #network-to-component-states { color: light-dark(#292821, #f5f0e8); }
+    #network-to-component-states h1,
+    #network-to-component-states h2,
+    #network-to-component-states h3,
+    #network-to-component-states button,
+    #network-to-component-states strong { font-weight: 500; }
+    #network-to-component-states .ns-board { border-color: light-dark(#e5ddd3, #393a34); background: light-dark(#f8f4ee, #171815); box-shadow: 0 16px 46px light-dark(rgba(73,60,46,.12), rgba(0,0,0,.38)); }
+    #network-to-component-states .ns-head,
+    #network-to-component-states .ns-tabs { border-color: light-dark(#e6ded4, #383933); }
+    #network-to-component-states .ns-mark { background: light-dark(#bd7053, #dc967a); color: light-dark(#fffaf4, #2d1811); }
+    #network-to-component-states .ns-tab { color: light-dark(#6d6d65, #b7b4ab); font-weight: 500; }
+    #network-to-component-states .ns-tab[aria-pressed="true"] { background: light-dark(#e7eee6, #29382e); color: light-dark(#3e5946, #c7dac9); }
+    #network-to-component-states button:focus-visible,
+    #network-to-component-states input:focus-visible { outline-color: light-dark(#a85f45, #e0a68d); }
+    #network-to-component-states .ns-panel { border-color: light-dark(#e4dbd0, #3a3b35); background: light-dark(#fffdf9, #20211d); }
+    #network-to-component-states .ns-head p,
+    #network-to-component-states .ns-panel-head p,
+    #network-to-component-states .ns-identity p,
+    #network-to-component-states .ns-help,
+    #network-to-component-states .ns-response-state p,
+    #network-to-component-states .ns-availability p,
+    #network-to-component-states .ns-connection p,
+    #network-to-component-states .ns-live { color: light-dark(#66665e, #bbb8af); }
+    #network-to-component-states .ns-state,
+    #network-to-component-states .ns-topic,
+    #network-to-component-states .ns-option,
+    #network-to-component-states .ns-feedback,
+    #network-to-component-states .ns-field,
+    #network-to-component-states .ns-composer input { border-color: light-dark(#e3dbd0, #3a3b35); background: light-dark(#fffdf9, #20211d); color: light-dark(#55564f, #cbc8bf); }
+    #network-to-component-states .ns-state[aria-pressed="true"],
+    #network-to-component-states .ns-topic[aria-pressed="true"],
+    #network-to-component-states .ns-option[aria-pressed="true"],
+    #network-to-component-states .ns-feedback[aria-pressed="true"] { border-color: light-dark(#aab7a9, #758d78); background: light-dark(#e5ece4, #29382e); color: light-dark(#344c3a, #d3e2d4); }
+    #network-to-component-states .ns-identity,
+    #network-to-component-states .ns-response-state { background: light-dark(#f4efe8, #292a25); }
+    #network-to-component-states .ns-monogram,
+    #network-to-component-states .ns-value-icon,
+    #network-to-component-states .ns-response-icon { background: light-dark(#e7eee6, #28362c); color: light-dark(#56705b, #b8ceb9); }
+    #network-to-component-states .ns-verified { color: light-dark(#56705b, #b8ceb9); font-weight: 500; }
+    #network-to-component-states .ns-disclosure,
+    #network-to-component-states .ns-context,
+    #network-to-component-states .ns-notice { background: light-dark(#e7eee6, #28362c); color: light-dark(#48624f, #c5d8c7); }
+    #network-to-component-states .ns-value { border-color: light-dark(#e6ded4, #383933); }
+    #network-to-component-states .ns-value p,
+    #network-to-component-states .ns-notice p { color: light-dark(#5f655c, #bdc5bb); }
+    #network-to-component-states .ns-meeting { background: light-dark(#f2e2d7, #3e2d26); color: light-dark(#7b4934, #e5ad94); }
+    #network-to-component-states .ns-meeting p { color: light-dark(#765747, #cfad9c); }
+    #network-to-component-states .ns-primary,
+    #network-to-component-states .ns-composer button { background: light-dark(#354c3d, #bfd3c1); color: light-dark(#fffdf8, #1d2b21); }
+    #network-to-component-states .ns-secondary,
+    #network-to-component-states .ns-small,
+    #network-to-component-states .ns-safety-action { background: light-dark(#eee8df, #292a25); color: light-dark(#4b4a43, #ece8df); }
+    #network-to-component-states .ns-availability-icon { background: light-dark(#f1dfd3, #402d25); color: light-dark(#a65f43, #e0a68d); }
+    #network-to-component-states .ns-bubble { background: light-dark(#f1ece5, #292a25); color: light-dark(#34332e, #ece8df); }
+    #network-to-component-states .ns-bubble.is-mine { background: light-dark(#526b57, #b7ceb9); color: light-dark(#fffdf8, #1d2b21); }
+
+    @media (max-width: 620px) {
+      #network-to-component-states .ns-board { border-radius: 22px; }
+      #network-to-component-states .ns-head { padding: 17px; }
+      #network-to-component-states .ns-category { padding: 13px; }
+      #network-to-component-states .ns-grid { grid-template-columns: 1fr; }
+      #network-to-component-states .ns-panel { padding: 14px; }
+      #network-to-component-states .ns-panel-head { flex-direction: column; }
+    }
+  </style>
+
+  <section class="ns-board">
+    <header class="ns-head"><div><h1>Component states</h1><p>Warm introductions, mutual choice, and momentum to meet.</p></div><span class="ns-mark"><i data-lucide="blocks" aria-hidden="true"></i></span></header>
+    <nav class="ns-tabs" aria-label="Component categories">
+      <button class="ns-tab" type="button" aria-pressed="true" data-category-target="trust">Trust &amp; identity</button>
+      <button class="ns-tab" type="button" aria-pressed="false" data-category-target="introduction">Introduction</button>
+      <button class="ns-tab" type="button" aria-pressed="false" data-category-target="availability">Available Today</button>
+      <button class="ns-tab" type="button" aria-pressed="false" data-category-target="messaging">Messaging</button>
+      <button class="ns-tab" type="button" aria-pressed="false" data-category-target="feedback">Feedback</button>
+      <button class="ns-tab" type="button" aria-pressed="false" data-category-target="system">System &amp; safety</button>
+    </nav>
+
+    <section class="ns-category is-active" data-category="trust" role="region" aria-label="Trust and identity components">
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Professional identity</h2><p>Verification states and precise trust language.</p></div><span class="ns-code">NTProfessionalIdentity</span></div>
+          <div class="ns-state-row" data-verification-controls><button class="ns-state" type="button" aria-pressed="true" data-verification="verified">Verified</button><button class="ns-state" type="button" aria-pressed="false" data-verification="pending">Pending</button><button class="ns-state" type="button" aria-pressed="false" data-verification="reverify">Reverify</button></div>
+          <div class="ns-identity"><span class="ns-monogram">MT</span><div><h3>Mesbah Tanvir</h3><p>Software Engineer at Meta</p><button class="ns-verified" type="button" data-toggle-disclosure aria-expanded="false" aria-controls="ns-verification-disclosure"><i data-lucide="badge-check" aria-hidden="true"></i><span data-verification-copy>Work identity confirmed</span></button></div></div>
+          <div class="ns-disclosure" id="ns-verification-disclosure" hidden><i data-lucide="info" aria-hidden="true"></i><span>Verified through access to a company email. This does not imply employer endorsement.</span></div>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Fields and topics</h2><p>Native input behavior with clear validation.</p></div><span class="ns-code">NTLabeledField</span></div>
+          <label><span class="ns-field-label">Work email</span><input class="ns-field" type="email" value="mesbah@meta.com" aria-describedby="ns-email-help" aria-invalid="false"><span class="ns-help" id="ns-email-help">Your work email is never shown to members.</span></label>
+          <div class="ns-state-row" style="margin-top:11px"><button class="ns-state" type="button" aria-pressed="false" data-toggle-validation>Show validation</button></div>
+          <div class="ns-topic-row"><button class="ns-topic" type="button" aria-pressed="true">AI infrastructure</button><button class="ns-topic" type="button" aria-pressed="true">Leadership</button><button class="ns-topic" type="button" aria-pressed="false">Startups</button><button class="ns-topic" type="button" aria-pressed="false">Product</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="ns-category" data-category="introduction" role="region" aria-label="Introduction components" hidden>
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Reciprocal value</h2><p>Professional relevance in both directions.</p></div><span class="ns-code">NTReciprocalValueSection</span></div>
+          <section class="ns-value"><span class="ns-value-icon"><i data-lucide="arrow-up-right" aria-hidden="true"></i></span><div><h3>Why you should meet</h3><p>Sarah builds large-scale inference systems and can offer perspective on frontier AI infrastructure teams.</p></div></section>
+          <section class="ns-value"><span class="ns-value-icon"><i data-lucide="hand" aria-hidden="true"></i></span><div><h3>Why Sarah may want to meet you</h3><p>Your experience operating distributed systems at global scale could be useful as her platform grows.</p></div></section>
+          <div class="ns-meeting"><i data-lucide="coffee" aria-hidden="true"></i><div><h3>Easy to meet this week</h3><p>Both around Downtown Toronto for weekday coffee chats.</p></div></div>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Response states</h2><p>Explicit actions with private mutual gating.</p></div><span class="ns-code">NTIntroductionActions</span></div>
+          <div data-intro-ready>
+            <div class="ns-identity"><span class="ns-monogram">SC</span><div><h3>Sarah Chen</h3><p>Staff Engineer at Northstar AI</p><span class="ns-verified"><i data-lucide="badge-check" aria-hidden="true"></i>Work email verified</span></div></div>
+            <div class="ns-actions"><button class="ns-secondary" type="button" data-intro-action="pass">Pass</button><button class="ns-primary" type="button" data-intro-action="interest">Interested</button></div>
+          </div>
+          <div class="ns-response-state" data-intro-outcome aria-live="polite" hidden><span class="ns-response-icon"><i data-lucide="lock-keyhole" aria-hidden="true"></i></span><h3 data-intro-title>Your interest is private.</h3><p data-intro-copy>We’ll let you know only if Sarah is interested too.</p><button class="ns-small" type="button" data-intro-reset style="margin-top:12px">Reset state</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="ns-category" data-category="availability" role="region" aria-label="Available Today components" hidden>
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Today control</h2><p>Temporary, coarse, and automatically expiring.</p></div><span class="ns-code">NTAvailableTodayControl</span></div>
+          <div class="ns-state-row" data-availability-controls><button class="ns-state" type="button" aria-pressed="true" data-availability="off">Off</button><button class="ns-state" type="button" aria-pressed="false" data-availability="active">Active</button><button class="ns-state" type="button" aria-pressed="false" data-availability="expiring">Expiring</button><button class="ns-state" type="button" aria-pressed="false" data-availability="expired">Expired</button></div>
+          <div class="ns-availability" aria-live="polite"><span class="ns-availability-icon"><i data-lucide="coffee" aria-hidden="true"></i></span><div><h3 data-availability-title>Available today</h3><p data-availability-copy>Open to a 1:1 coffee?</p></div><button class="ns-small" type="button" data-availability-button>Set</button></div>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Configuration sheet</h2><p>Broad area and time—not live location.</p></div><span class="ns-code">NTAvailabilitySheet</span></div>
+          <h3>Area</h3><div class="ns-option-grid" data-option-group="area"><button class="ns-option" type="button" aria-pressed="true">Financial District</button><button class="ns-option" type="button" aria-pressed="false">King West</button><button class="ns-option" type="button" aria-pressed="false">Downtown</button></div>
+          <h3 style="margin-top:14px">Time</h3><div class="ns-option-grid" data-option-group="time"><button class="ns-option" type="button" aria-pressed="true">Lunch</button><button class="ns-option" type="button" aria-pressed="false">Afternoon</button><button class="ns-option" type="button" aria-pressed="false">After work</button></div>
+          <p class="ns-expiry"><i data-lucide="clock" aria-hidden="true"></i>Expires automatically. Precise location is never shared.</p>
+          <button class="ns-primary" type="button" data-activate style="width:100%;margin-top:12px">Turn on</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="ns-category" data-category="messaging" role="region" aria-label="Messaging components" hidden>
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Conversation context</h2><p>Professional purpose remains visible.</p></div><span class="ns-code">NTIntroductionContextStrip</span></div>
+          <div class="ns-context"><i data-lucide="arrow-left-right" aria-hidden="true"></i><span>Introduced for complementary experience in AI infrastructure and distributed systems.</span></div>
+          <div class="ns-chat" aria-live="polite"><div class="ns-bubble">I’d enjoy comparing notes on scaling infrastructure teams.</div><div class="ns-bubble is-mine" data-last-message>Are you around downtown Tuesday at lunch?</div><span class="ns-failed-label" role="alert">Not sent · Tap to retry</span><div class="ns-bubble">Yes—12:30 near King and Spadina works.</div></div>
+          <button class="ns-state" type="button" aria-pressed="false" data-toggle-failure>Show failed send</button>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Text composer</h2><p>Mutual introductions only.</p></div><span class="ns-code">NTMessageComposer</span></div>
+          <div class="ns-meeting"><i data-lucide="coffee" aria-hidden="true"></i><div><h3>Coffee chat planned</h3><p>Tuesday · 12:30 PM · King &amp; Spadina area</p></div></div>
+          <form class="ns-composer" style="margin-top:14px"><label class="sr-only" for="ns-message-input">Message Sarah</label><input id="ns-message-input" type="text" placeholder="Message Sarah"><button type="button" data-send-message aria-label="Send message"><i data-lucide="arrow-up" aria-hidden="true"></i></button></form>
+          <p class="ns-live" aria-live="polite">Chat opens only after mutual interest.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="ns-category" data-category="feedback" role="region" aria-label="Feedback and Connection components" hidden>
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Private feedback</h2><p>No stars, ratings, or public reputation.</p></div><span class="ns-code">NTMeetupFeedbackChoice</span></div>
+          <div class="ns-feedback-list"><button class="ns-feedback" type="button" aria-pressed="false" data-feedback><i data-lucide="sun" aria-hidden="true"></i><span><strong>Great connection</strong><small>I’m glad we met</small></span><i data-lucide="check" aria-hidden="true"></i></button><button class="ns-feedback" type="button" aria-pressed="false" data-feedback><i data-lucide="message-circle" aria-hidden="true"></i><span><strong>Good conversation</strong><small>Useful and worth staying connected</small></span><i data-lucide="check" aria-hidden="true"></i></button><button class="ns-feedback" type="button" aria-pressed="false" data-feedback><i data-lucide="minus" aria-hidden="true"></i><span><strong>Didn’t really connect</strong><small>Not the right professional fit</small></span><i data-lucide="check" aria-hidden="true"></i></button><button class="ns-feedback" type="button" aria-pressed="false" data-feedback><i data-lucide="calendar-x" aria-hidden="true"></i><span><strong>Didn’t meet</strong><small>The coffee chat didn’t happen</small></span><i data-lucide="check" aria-hidden="true"></i></button></div>
+          <button class="ns-primary" type="button" data-submit-feedback disabled style="width:100%;margin-top:12px">Continue</button>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Connection outcome</h2><p>A relationship becomes real through meeting.</p></div><span class="ns-code">NTConnectionCreatedState</span></div>
+          <div class="ns-response-state" data-feedback-placeholder><span class="ns-response-icon"><i data-lucide="lock-keyhole" aria-hidden="true"></i></span><h3>Feedback is private.</h3><p>Select an outcome to preview the Connection state.</p></div>
+          <div class="ns-connection" role="status" aria-live="polite"><span class="ns-success-icon"><i data-lucide="users-round" aria-hidden="true"></i></span><h2>Connection created.</h2><p>Sarah is now part of your professional network because you met—not because you clicked Connect.</p><div class="ns-identity" style="margin-top:14px;text-align:left"><span class="ns-monogram">SC</span><div><h3>Sarah Chen</h3><p>Northstar AI · Met over coffee Sep 1</p></div></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="ns-category" data-category="system" role="region" aria-label="System and safety states" hidden>
+      <div class="ns-grid">
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>System notices</h2><p>Truthful, finite, and actionable.</p></div><span class="ns-code">NTInlineNotice</span></div>
+          <div class="ns-state-row" data-system-controls><button class="ns-state" type="button" aria-pressed="true" data-system="quality">Quality wait</button><button class="ns-state" type="button" aria-pressed="false" data-system="offline">Offline</button><button class="ns-state" type="button" aria-pressed="false" data-system="safety">Safety</button></div>
+          <div class="ns-notice" aria-live="polite"><span class="ns-notice-icon"><i data-lucide="hourglass" aria-hidden="true"></i></span><div><h3 data-system-title>We’re looking for someone worthwhile.</h3><p data-system-copy>There’s no introduction above the quality threshold yet. We’ll notify you when there is.</p></div></div>
+        </article>
+
+        <article class="ns-panel">
+          <div class="ns-panel-head"><div><h2>Safety menu</h2><p>Available without dominating normal use.</p></div><span class="ns-code">NTSafetyMenu</span></div>
+          <div class="ns-safety-actions"><button class="ns-safety-action" type="button"><i data-lucide="circle-stop" aria-hidden="true"></i>End conversation</button><button class="ns-safety-action is-destructive" type="button"><i data-lucide="ban" aria-hidden="true"></i>Block member</button><button class="ns-safety-action is-destructive" type="button"><i data-lucide="flag" aria-hidden="true"></i>Report a safety concern</button></div>
+          <div class="ns-disclosure is-visible" style="margin-top:12px"><i data-lucide="shield" aria-hidden="true"></i><span>Romantic or sexual behaviour is reportable because this is a professional-only network.</span></div>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('network-to-component-states');
+
+      root.querySelectorAll('[data-category-target]').forEach((tab) => tab.addEventListener('click', () => {
+        root.querySelectorAll('[data-category-target]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        root.querySelectorAll('[data-category]').forEach((panel) => {
+          panel.classList.remove('is-active');
+          panel.hidden = true;
+        });
+        tab.setAttribute('aria-pressed', 'true');
+        const activePanel = root.querySelector(`[data-category="${tab.dataset.categoryTarget}"]`);
+        activePanel.hidden = false;
+        activePanel.classList.add('is-active');
+      }));
+
+      const verifiedLine = root.querySelector('.ns-verified');
+      const verifiedCopy = root.querySelector('[data-verification-copy]');
+      root.querySelectorAll('[data-verification]').forEach((button) => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-verification]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        verifiedLine.classList.remove('is-pending', 'is-warning');
+        if (button.dataset.verification === 'verified') verifiedCopy.textContent = 'Work identity confirmed';
+        if (button.dataset.verification === 'pending') { verifiedCopy.textContent = 'Company review pending'; verifiedLine.classList.add('is-pending'); }
+        if (button.dataset.verification === 'reverify') { verifiedCopy.textContent = 'Reverification required'; verifiedLine.classList.add('is-warning'); }
+      }));
+
+      root.querySelector('[data-toggle-disclosure]').addEventListener('click', (event) => {
+        const disclosure = root.querySelector('#ns-verification-disclosure');
+        const expanded = event.currentTarget.getAttribute('aria-expanded') !== 'true';
+        event.currentTarget.setAttribute('aria-expanded', String(expanded));
+        disclosure.hidden = !expanded;
+        disclosure.classList.toggle('is-visible', expanded);
+      });
+      root.querySelector('[data-toggle-validation]').addEventListener('click', (event) => {
+        const field = root.querySelector('.ns-field');
+        const help = field.parentElement.querySelector('.ns-help');
+        const active = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+        event.currentTarget.setAttribute('aria-pressed', String(active));
+        field.classList.toggle('is-error', active);
+        field.setAttribute('aria-invalid', String(active));
+        help.classList.toggle('is-error', active);
+        help.textContent = active ? 'Use a qualifying company email. Consumer addresses are not eligible.' : 'Your work email is never shown to members.';
+      });
+
+      root.querySelectorAll('.ns-topic').forEach((topic) => topic.addEventListener('click', () => topic.setAttribute('aria-pressed', topic.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')));
+
+      const introReady = root.querySelector('[data-intro-ready]');
+      const introOutcome = root.querySelector('[data-intro-outcome]');
+      root.querySelectorAll('[data-intro-action]').forEach((button) => button.addEventListener('click', () => {
+        introReady.hidden = true;
+        introOutcome.hidden = false;
+        if (button.dataset.introAction === 'interest') {
+          root.querySelector('[data-intro-title]').textContent = 'Your interest is private.';
+          root.querySelector('[data-intro-copy]').textContent = 'We’ll let you know only if Sarah is interested too.';
+        } else {
+          root.querySelector('[data-intro-title]').textContent = 'Introduction closed.';
+          root.querySelector('[data-intro-copy]').textContent = 'Sarah won’t be notified. We’ll keep looking for someone worthwhile.';
+        }
+        root.querySelector('[data-intro-reset]').focus();
+      }));
+      root.querySelector('[data-intro-reset]').addEventListener('click', () => {
+        introReady.hidden = false;
+        introOutcome.hidden = true;
+        introReady.querySelector('button').focus();
+      });
+
+      const availabilityTitle = root.querySelector('[data-availability-title]');
+      const availabilityCopy = root.querySelector('[data-availability-copy]');
+      const availabilityButton = root.querySelector('[data-availability-button]');
+      root.querySelectorAll('[data-availability]').forEach((button) => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-availability]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        const state = button.dataset.availability;
+        if (state === 'off') { availabilityTitle.textContent = 'Available today'; availabilityCopy.textContent = 'Open to a 1:1 coffee?'; availabilityButton.textContent = 'Set'; }
+        if (state === 'active') { availabilityTitle.textContent = 'Available today — on'; availabilityCopy.textContent = 'Financial District · Lunch · until 2:00 PM'; availabilityButton.textContent = 'Change'; }
+        if (state === 'expiring') { availabilityTitle.textContent = 'Available for 24 more minutes'; availabilityCopy.textContent = 'Financial District · Lunch · expires 2:00 PM'; availabilityButton.textContent = 'Change'; }
+        if (state === 'expired') { availabilityTitle.textContent = 'Availability expired'; availabilityCopy.textContent = 'Your location context is no longer active.'; availabilityButton.textContent = 'Set again'; }
+      }));
+
+      root.querySelectorAll('[data-option-group]').forEach((group) => group.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+      })));
+      root.querySelector('[data-activate]').addEventListener('click', () => root.querySelector('[data-availability="active"]').click());
+
+      root.querySelector('[data-toggle-failure]').addEventListener('click', (event) => {
+        const active = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+        event.currentTarget.setAttribute('aria-pressed', String(active));
+        root.querySelector('[data-last-message]').classList.toggle('is-failed', active);
+        root.querySelector('.ns-failed-label').classList.toggle('is-visible', active);
+      });
+
+      function sendPreviewMessage() {
+        const input = root.querySelector('#ns-message-input');
+        const value = input.value.trim();
+        if (!value) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'ns-bubble is-mine';
+        bubble.textContent = value;
+        root.querySelector('.ns-chat').appendChild(bubble);
+        input.value = '';
+        root.querySelector('.ns-live').textContent = 'Message added locally for this preview.';
+      }
+
+      root.querySelector('[data-send-message]').addEventListener('click', sendPreviewMessage);
+      root.querySelector('#ns-message-input').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        sendPreviewMessage();
+      });
+
+      const feedbackSubmit = root.querySelector('[data-submit-feedback]');
+      root.querySelectorAll('[data-feedback]').forEach((button) => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-feedback]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        feedbackSubmit.disabled = false;
+      }));
+      feedbackSubmit.addEventListener('click', () => {
+        root.querySelector('[data-feedback-placeholder]').hidden = true;
+        root.querySelector('.ns-connection').classList.add('is-visible');
+      });
+
+      const systemNotice = root.querySelector('.ns-notice');
+      const systemIcon = systemNotice.querySelector('.ns-notice-icon');
+      root.querySelectorAll('[data-system]').forEach((button) => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-system]').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        systemNotice.classList.remove('is-offline', 'is-safety');
+        const state = button.dataset.system;
+        if (state === 'quality') { root.querySelector('[data-system-title]').textContent = 'We’re looking for someone worthwhile.'; root.querySelector('[data-system-copy]').textContent = 'There’s no introduction above the quality threshold yet. We’ll notify you when there is.'; systemIcon.innerHTML = '<i data-lucide="hourglass" aria-hidden="true"></i>'; }
+        if (state === 'offline') { systemNotice.classList.add('is-offline'); root.querySelector('[data-system-title]').textContent = 'You’re offline.'; root.querySelector('[data-system-copy]').textContent = 'Your response was not submitted. Reconnect and try again.'; systemIcon.innerHTML = '<i data-lucide="wifi-off" aria-hidden="true"></i>'; }
+        if (state === 'safety') { systemNotice.classList.add('is-safety'); root.querySelector('[data-system-title]').textContent = 'Conversation ended.'; root.querySelector('[data-system-copy]').textContent = 'This member can no longer message you or appear in future introductions.'; systemIcon.innerHTML = '<i data-lucide="shield-alert" aria-hidden="true"></i>'; }
+        if (window.lucide) lucide.createIcons({ attrs: { width: 16, height: 16 } });
+      }));
+    })();
+  </script>
+</div>

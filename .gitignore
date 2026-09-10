@@ -1,0 +1,12 @@
+.DS_Store
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+!.env.example
+supabase/.branches/
+supabase/.temp/
+supabase/functions/.env
+NetworkTo/Config/Local.xcconfig

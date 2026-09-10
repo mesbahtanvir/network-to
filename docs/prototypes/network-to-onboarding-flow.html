@@ -1,0 +1,730 @@
+<div id="network-to-onboarding-flow" role="region" aria-label="Interactive network.to professional onboarding flow">
+  <style>
+    #network-to-onboarding-flow {
+      color-scheme: light dark;
+      width: 100%;
+      height: 676px;
+      display: grid;
+      place-items: start center;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+      color: light-dark(#162033, #f5f7fa);
+    }
+
+    #network-to-onboarding-flow * { box-sizing: border-box; }
+
+    #network-to-onboarding-flow .no-phone {
+      position: relative;
+      width: min(100%, 393px);
+      height: 818px;
+      overflow: hidden;
+      transform: scale(.82);
+      transform-origin: top center;
+      border: 7px solid light-dark(#22262b, #303338);
+      border-radius: 48px;
+      background: light-dark(#f6f5f2, #111315);
+      box-shadow: 0 24px 70px light-dark(rgba(38, 47, 61, .16), rgba(0, 0, 0, .48));
+    }
+
+    #network-to-onboarding-flow .no-island {
+      position: absolute;
+      z-index: 20;
+      top: 10px;
+      left: 50%;
+      width: 118px;
+      height: 31px;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #08090a;
+    }
+
+    #network-to-onboarding-flow .no-status {
+      height: 43px;
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 23px 0;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    #network-to-onboarding-flow .no-status span:last-child { display: flex; gap: 5px; }
+    #network-to-onboarding-flow .no-status svg { width: 14px; height: 14px; }
+
+    #network-to-onboarding-flow h1,
+    #network-to-onboarding-flow h2,
+    #network-to-onboarding-flow h3,
+    #network-to-onboarding-flow p { margin: 0; }
+
+    #network-to-onboarding-flow h1 {
+      font-size: 31px;
+      line-height: 1.08;
+      font-weight: 500;
+      letter-spacing: -.035em;
+    }
+
+    #network-to-onboarding-flow h2 {
+      font-size: 21px;
+      line-height: 1.17;
+      font-weight: 500;
+      letter-spacing: -.022em;
+    }
+
+    #network-to-onboarding-flow h3 {
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 500;
+      letter-spacing: -.01em;
+    }
+
+    #network-to-onboarding-flow button,
+    #network-to-onboarding-flow input,
+    #network-to-onboarding-flow textarea,
+    #network-to-onboarding-flow select {
+      font: inherit;
+      color: inherit;
+    }
+
+    #network-to-onboarding-flow button { cursor: pointer; }
+    #network-to-onboarding-flow button:focus-visible,
+    #network-to-onboarding-flow input:focus-visible,
+    #network-to-onboarding-flow textarea:focus-visible,
+    #network-to-onboarding-flow select:focus-visible {
+      outline: 3px solid light-dark(#315b8a, #86b2df);
+      outline-offset: 2px;
+    }
+
+    #network-to-onboarding-flow .no-header {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      gap: 9px;
+      align-items: center;
+      height: 58px;
+      padding: 0 16px;
+    }
+
+    #network-to-onboarding-flow .no-header[hidden] { display: none !important; }
+
+    #network-to-onboarding-flow .no-back,
+    #network-to-onboarding-flow .no-skip {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: light-dark(#ecedea, #24282c);
+    }
+
+    #network-to-onboarding-flow .no-back svg { width: 20px; height: 20px; }
+    #network-to-onboarding-flow .no-skip { width: auto; padding: 0 10px; border-radius: 14px; background: transparent; color: light-dark(#315b8a, #86b2df); font-size: 12px; font-weight: 500; }
+
+    #network-to-onboarding-flow .no-progress-wrap { display: grid; gap: 6px; text-align: center; }
+    #network-to-onboarding-flow .no-progress-label { color: light-dark(#68717d, #a7afb8); font-size: 11px; font-weight: 500; }
+    #network-to-onboarding-flow .no-progress {
+      height: 4px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: light-dark(#e1e2de, #30353a);
+    }
+
+    #network-to-onboarding-flow .no-progress-bar {
+      height: 100%;
+      width: 0;
+      border-radius: 3px;
+      background: light-dark(#315b8a, #86b2df);
+      transition: width .22s ease;
+    }
+
+    #network-to-onboarding-flow .no-screen {
+      display: none;
+      height: 657px;
+      padding: 12px 20px 94px;
+      overflow: hidden;
+    }
+
+    #network-to-onboarding-flow .no-screen[hidden] { display: none !important; }
+    #network-to-onboarding-flow .no-screen.is-active { display: block; }
+    #network-to-onboarding-flow .no-screen.no-welcome,
+    #network-to-onboarding-flow .no-screen.no-complete { height: 715px; padding: 20px 22px 96px; }
+
+    #network-to-onboarding-flow .no-lead {
+      margin-top: 9px;
+      color: light-dark(#68717d, #a7afb8);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    #network-to-onboarding-flow .no-eyebrow {
+      display: inline-flex;
+      color: light-dark(#315b8a, #9fc5eb);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #network-to-onboarding-flow .no-bottom {
+      position: absolute;
+      z-index: 12;
+      left: 17px;
+      right: 17px;
+      bottom: 16px;
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid light-dark(rgba(255,255,255,.75), rgba(255,255,255,.1));
+      border-radius: 25px;
+      background: light-dark(rgba(244,243,240,.9), rgba(29,32,35,.88));
+      box-shadow: 0 10px 35px light-dark(rgba(38,47,61,.15), rgba(0,0,0,.32));
+      backdrop-filter: blur(26px) saturate(1.35);
+    }
+
+    #network-to-onboarding-flow .no-bottom.no-two { grid-template-columns: .9fr 1.5fr; gap: 9px; }
+
+    #network-to-onboarding-flow .no-primary,
+    #network-to-onboarding-flow .no-secondary {
+      min-height: 46px;
+      border: 0;
+      border-radius: 16px;
+      padding: 0 17px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #network-to-onboarding-flow .no-primary {
+      background: light-dark(#203f66, #b9d6f2);
+      color: light-dark(#fff, #162033);
+    }
+
+    #network-to-onboarding-flow .no-secondary {
+      background: light-dark(#ecedea, #24282c);
+      color: light-dark(#344050, #e4e8ec);
+    }
+
+    #network-to-onboarding-flow .no-primary:disabled { opacity: .4; cursor: default; }
+
+    #network-to-onboarding-flow .no-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: -.02em;
+    }
+
+    #network-to-onboarding-flow .no-brand-mark {
+      width: 35px;
+      height: 35px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: light-dark(#203f66, #b9d6f2);
+      color: light-dark(#fff, #162033);
+    }
+
+    #network-to-onboarding-flow .no-welcome-hero {
+      position: relative;
+      min-height: 435px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+      margin: 33px -2px 0;
+      padding: 25px;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 78% 18%, light-dark(rgba(255,255,255,.82), rgba(255,255,255,.12)) 0 9%, transparent 31%),
+        linear-gradient(145deg, light-dark(#e9eef3, #1d2b39), light-dark(#dce6ef, #17222d));
+      border: 1px solid light-dark(#d9dfe4, #2e3e4d);
+    }
+
+    #network-to-onboarding-flow .no-welcome-hero::after {
+      content: "";
+      position: absolute;
+      width: 285px;
+      height: 285px;
+      right: -135px;
+      top: -96px;
+      border: 48px solid light-dark(rgba(49,91,138,.09), rgba(134,178,223,.09));
+      border-radius: 50%;
+    }
+
+    #network-to-onboarding-flow .no-welcome-icon {
+      position: absolute;
+      z-index: 2;
+      top: 26px;
+      left: 25px;
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: light-dark(#315b8a, #86b2df);
+      color: light-dark(#fff, #142437);
+    }
+
+    #network-to-onboarding-flow .no-welcome-icon svg { width: 27px; height: 27px; }
+    #network-to-onboarding-flow .no-welcome-hero h1 { position: relative; z-index: 2; max-width: 285px; font-size: 37px; }
+    #network-to-onboarding-flow .no-welcome-hero p { position: relative; z-index: 2; max-width: 290px; margin-top: 14px; color: light-dark(#596574, #b9c2cb); font-size: 15px; line-height: 1.45; }
+    #network-to-onboarding-flow .no-boundary { display: flex; gap: 9px; align-items: flex-start; margin-top: 16px; padding: 13px; border-radius: 17px; background: light-dark(#ecedea, #24282c); color: light-dark(#5d6672, #b3bac2); font-size: 12px; line-height: 1.4; }
+    #network-to-onboarding-flow .no-boundary svg { flex: 0 0 auto; color: light-dark(#315b8a, #9fc5eb); }
+
+    #network-to-onboarding-flow .no-field { display: block; margin-top: 20px; }
+    #network-to-onboarding-flow .no-field > span { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; }
+    #network-to-onboarding-flow .no-field small { display: block; margin-top: 7px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.4; }
+    #network-to-onboarding-flow .no-input-wrap { position: relative; }
+    #network-to-onboarding-flow .no-input-wrap svg { position: absolute; top: 50%; left: 14px; width: 18px; height: 18px; transform: translateY(-50%); color: light-dark(#78818c, #969ea7); pointer-events: none; }
+    #network-to-onboarding-flow input,
+    #network-to-onboarding-flow textarea,
+    #network-to-onboarding-flow select {
+      width: 100%;
+      border: 1px solid light-dark(#d9dcd8, #34393e);
+      border-radius: 16px;
+      background: light-dark(#fff, #1a1d20);
+      font-size: 16px;
+    }
+
+    #network-to-onboarding-flow input,
+    #network-to-onboarding-flow select { height: 50px; padding: 0 13px; }
+    #network-to-onboarding-flow .no-input-wrap input { padding-left: 43px; }
+    #network-to-onboarding-flow textarea { min-height: 94px; resize: none; padding: 13px; line-height: 1.42; }
+    #network-to-onboarding-flow input:focus-visible,
+    #network-to-onboarding-flow textarea:focus-visible,
+    #network-to-onboarding-flow select:focus-visible { border-color: light-dark(#315b8a, #86b2df); }
+
+    #network-to-onboarding-flow .no-error { display: none; margin-top: 8px; color: light-dark(#b42332, #ff7a88); font-size: 12px; }
+    #network-to-onboarding-flow .no-error.is-visible { display: block; }
+
+    #network-to-onboarding-flow .no-trust-list { display: grid; gap: 11px; margin-top: 26px; }
+    #network-to-onboarding-flow .no-trust-row { display: grid; grid-template-columns: 38px 1fr; gap: 11px; align-items: center; }
+    #network-to-onboarding-flow .no-trust-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; background: light-dark(#e5edf4, #203141); color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-onboarding-flow .no-trust-row p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.35; }
+
+    #network-to-onboarding-flow .no-code {
+      margin-top: 27px;
+      height: 64px;
+      border-radius: 18px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: .28em;
+      padding-left: .28em;
+    }
+
+    #network-to-onboarding-flow .no-resend { display: block; margin: 12px auto 0; border: 0; background: transparent; color: light-dark(#315b8a, #86b2df); font-size: 12px; font-weight: 500; }
+
+    #network-to-onboarding-flow .no-verified-hero { display: grid; place-items: center; align-content: center; min-height: 365px; text-align: center; }
+    #network-to-onboarding-flow .no-verified-icon { width: 82px; height: 82px; display: grid; place-items: center; margin-bottom: 21px; border-radius: 28px; background: light-dark(#e1efe7, #183126); color: light-dark(#2e7350, #6bc18f); }
+    #network-to-onboarding-flow .no-verified-icon svg { width: 38px; height: 38px; }
+    #network-to-onboarding-flow .no-verified-hero p { max-width: 285px; margin-top: 10px; color: light-dark(#68717d, #a7afb8); font-size: 14px; line-height: 1.45; }
+
+    #network-to-onboarding-flow .no-company-card { display: grid; grid-template-columns: 48px 1fr; gap: 13px; align-items: center; margin-top: 9px; padding: 15px; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 20px; background: light-dark(#fff, #1a1d20); text-align: left; }
+    #network-to-onboarding-flow .no-company-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; background: light-dark(#e5edf4, #203141); color: light-dark(#315b8a, #9fc5eb); font-size: 19px; font-weight: 500; }
+    #network-to-onboarding-flow .no-company-card p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+
+    #network-to-onboarding-flow .no-form-grid { display: grid; gap: 13px; margin-top: 20px; }
+    #network-to-onboarding-flow .no-form-grid .no-field { margin-top: 0; }
+
+    #network-to-onboarding-flow .no-section-label { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+    #network-to-onboarding-flow .no-section-label span { color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+
+    #network-to-onboarding-flow .no-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    #network-to-onboarding-flow .no-chip {
+      min-height: 44px;
+      border: 1px solid light-dark(#dfe0dd, #34393e);
+      border-radius: 14px;
+      padding: 0 13px;
+      background: light-dark(#fff, #1a1d20);
+      color: light-dark(#4e5966, #c2c8cf);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    #network-to-onboarding-flow .no-chip[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e5edf4, #203141); color: light-dark(#203f66, #b9d6f2); }
+
+    #network-to-onboarding-flow .no-reciprocity {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 11px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 13px;
+      border-radius: 17px;
+      background: light-dark(#e9eef3, #203141);
+      color: light-dark(#315b8a, #b9d6f2);
+    }
+
+    #network-to-onboarding-flow .no-reciprocity-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; background: light-dark(#315b8a, #86b2df); color: light-dark(#fff, #142437); }
+    #network-to-onboarding-flow .no-reciprocity p { margin-top: 3px; color: light-dark(#536b83, #a8bfd7); font-size: 11px; line-height: 1.35; }
+
+    #network-to-onboarding-flow .no-choice-list { display: grid; gap: 10px; margin-top: 20px; }
+    #network-to-onboarding-flow .no-choice {
+      min-height: 63px;
+      display: grid;
+      grid-template-columns: 36px 1fr 20px;
+      gap: 11px;
+      align-items: center;
+      border: 1px solid light-dark(#e1e2de, #30353a);
+      border-radius: 17px;
+      padding: 10px 13px;
+      background: light-dark(#fff, #1a1d20);
+      text-align: left;
+    }
+
+    #network-to-onboarding-flow .no-choice-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: light-dark(#ecedea, #24282c); color: light-dark(#596574, #b9c2cb); }
+    #network-to-onboarding-flow .no-choice p { margin-top: 3px; color: light-dark(#68717d, #a7afb8); font-size: 11px; }
+    #network-to-onboarding-flow .no-choice > svg { opacity: 0; color: light-dark(#315b8a, #9fc5eb); }
+    #network-to-onboarding-flow .no-choice[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e9eef3, #203141); }
+    #network-to-onboarding-flow .no-choice[aria-pressed="true"] > svg { opacity: 1; }
+
+    #network-to-onboarding-flow .no-compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+    #network-to-onboarding-flow .no-compact-option { min-height: 68px; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 17px; padding: 11px; background: light-dark(#fff, #1a1d20); text-align: left; }
+    #network-to-onboarding-flow .no-compact-option p { margin-top: 4px; color: light-dark(#68717d, #a7afb8); font-size: 11px; line-height: 1.3; }
+    #network-to-onboarding-flow .no-compact-option[aria-pressed="true"] { border-color: light-dark(#315b8a, #86b2df); background: light-dark(#e9eef3, #203141); }
+
+    #network-to-onboarding-flow .no-private-card { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 14px; border-radius: 18px; background: light-dark(#e5edf4, #203141); }
+    #network-to-onboarding-flow .no-private-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 14px; background: light-dark(#315b8a, #86b2df); color: light-dark(#fff, #142437); }
+    #network-to-onboarding-flow .no-private-card p { margin-top: 4px; color: light-dark(#536b83, #a8bfd7); font-size: 11px; line-height: 1.4; }
+
+    #network-to-onboarding-flow .no-review { display: grid; gap: 10px; margin-top: 16px; }
+    #network-to-onboarding-flow .no-review-card { padding: 14px; border: 1px solid light-dark(#e1e2de, #30353a); border-radius: 18px; background: light-dark(#fff, #1a1d20); }
+    #network-to-onboarding-flow .no-review-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    #network-to-onboarding-flow .no-visibility { display: inline-flex; align-items: center; gap: 4px; color: light-dark(#68717d, #a7afb8); font-size: 11px; font-weight: 500; }
+    #network-to-onboarding-flow .no-visibility svg { width: 12px; height: 12px; }
+    #network-to-onboarding-flow .no-review-card p { margin-top: 7px; color: light-dark(#5f6976, #aeb6bf); font-size: 11px; line-height: 1.4; }
+
+    #network-to-onboarding-flow .no-complete-centre { min-height: 555px; display: grid; place-items: center; align-content: center; text-align: center; }
+    #network-to-onboarding-flow .no-complete-icon { width: 84px; height: 84px; display: grid; place-items: center; margin-bottom: 22px; border-radius: 29px; background: light-dark(#e1efe7, #183126); color: light-dark(#2e7350, #6bc18f); }
+    #network-to-onboarding-flow .no-complete-icon svg { width: 39px; height: 39px; }
+    #network-to-onboarding-flow .no-complete-centre p { max-width: 300px; margin-top: 11px; color: light-dark(#68717d, #a7afb8); font-size: 14px; line-height: 1.45; }
+    #network-to-onboarding-flow .no-complete-note { display: flex; gap: 8px; align-items: flex-start; max-width: 300px; margin-top: 21px; padding: 12px; border-radius: 16px; background: light-dark(#ecedea, #24282c); color: light-dark(#5f6976, #aeb6bf); font-size: 11px; line-height: 1.4; text-align: left; }
+
+    #network-to-onboarding-flow .no-toast {
+      position: absolute;
+      z-index: 40;
+      left: 50%;
+      bottom: 95px;
+      max-width: calc(100% - 44px);
+      padding: 10px 15px;
+      transform: translate(-50%, 18px);
+      border-radius: 17px;
+      background: light-dark(rgba(22,32,51,.94), rgba(245,247,250,.94));
+      color: light-dark(#fff, #162033);
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      backdrop-filter: blur(18px);
+    }
+
+    #network-to-onboarding-flow .no-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 360px) {
+      #network-to-onboarding-flow { height: 626px; }
+      #network-to-onboarding-flow .no-phone { height: 754px; border-radius: 40px; }
+      #network-to-onboarding-flow .no-screen { height: 593px; padding-inline: 15px; }
+      #network-to-onboarding-flow .no-screen.no-welcome,
+      #network-to-onboarding-flow .no-screen.no-complete { height: 651px; padding-inline: 17px; }
+      #network-to-onboarding-flow .no-welcome-hero { min-height: 380px; margin-top: 19px; }
+      #network-to-onboarding-flow .no-welcome-hero h1 { font-size: 32px; }
+      #network-to-onboarding-flow .no-form-grid { gap: 9px; }
+      #network-to-onboarding-flow .no-chip-grid { gap: 6px; }
+      #network-to-onboarding-flow .no-chip { min-height: 44px; padding-inline: 10px; }
+      #network-to-onboarding-flow .no-choice-list { gap: 7px; }
+      #network-to-onboarding-flow .no-choice { min-height: 56px; }
+      #network-to-onboarding-flow .no-review { gap: 7px; }
+      #network-to-onboarding-flow .no-review-card { padding: 11px; }
+    }
+
+    /* Warm, human visual direction: quiet confidence instead of enterprise chrome. */
+    #network-to-onboarding-flow { color: light-dark(#292821, #f5f0e8); }
+    #network-to-onboarding-flow .no-phone {
+      border-width: 5px;
+      border-color: light-dark(#30312d, #55554f);
+      background: light-dark(#f8f4ee, #171815);
+      box-shadow: 0 22px 56px light-dark(rgba(73,60,46,.16), rgba(0,0,0,.46));
+    }
+    #network-to-onboarding-flow h1,
+    #network-to-onboarding-flow h2,
+    #network-to-onboarding-flow h3,
+    #network-to-onboarding-flow button,
+    #network-to-onboarding-flow strong,
+    #network-to-onboarding-flow .no-status,
+    #network-to-onboarding-flow .no-brand,
+    #network-to-onboarding-flow .no-field > span { font-weight: 500; }
+    #network-to-onboarding-flow .no-eyebrow {
+      color: light-dark(#687466, #b8c4b6);
+      font-weight: 500;
+      letter-spacing: .015em;
+      text-transform: none;
+    }
+    #network-to-onboarding-flow button:focus-visible,
+    #network-to-onboarding-flow input:focus-visible,
+    #network-to-onboarding-flow textarea:focus-visible,
+    #network-to-onboarding-flow select:focus-visible { outline-color: light-dark(#a85f45, #e0a68d); }
+    #network-to-onboarding-flow .no-back { background: light-dark(#eee8df, #282923); color: light-dark(#4d5d50, #cbd6ca); }
+    #network-to-onboarding-flow .no-progress { background: light-dark(#e7ded3, #34352f); }
+    #network-to-onboarding-flow .no-progress-bar { background: light-dark(#bd7053, #dc967a); }
+    #network-to-onboarding-flow .no-bottom {
+      border-color: light-dark(#e7ded3, #393a34);
+      background: light-dark(rgba(255,252,247,.96), rgba(32,33,29,.96));
+      box-shadow: 0 9px 28px light-dark(rgba(74,58,43,.13), rgba(0,0,0,.30));
+      backdrop-filter: blur(18px);
+    }
+    #network-to-onboarding-flow .no-primary { background: light-dark(#354c3d, #bfd3c1); color: light-dark(#fffdf8, #1d2b21); }
+    #network-to-onboarding-flow .no-secondary { background: light-dark(#eee8df, #292a25); color: light-dark(#4b4a43, #ece8df); }
+    #network-to-onboarding-flow .no-brand-mark,
+    #network-to-onboarding-flow .no-welcome-icon { background: light-dark(#bd7053, #dc967a); color: light-dark(#fffaf4, #2d1811); }
+    #network-to-onboarding-flow .no-welcome-hero {
+      border-color: transparent;
+      background:
+        radial-gradient(circle at 80% 16%, light-dark(rgba(255,255,255,.78), rgba(255,255,255,.10)) 0 9%, transparent 30%),
+        linear-gradient(145deg, light-dark(#f0e1d5, #3b2b24), light-dark(#e3ece3, #243229));
+      box-shadow: inset 0 0 0 1px light-dark(rgba(112,93,71,.08), rgba(255,255,255,.06));
+    }
+    #network-to-onboarding-flow .no-welcome-hero::after { border-color: light-dark(rgba(94,119,96,.10), rgba(174,203,177,.10)); }
+    #network-to-onboarding-flow .no-welcome-hero p,
+    #network-to-onboarding-flow .no-lead,
+    #network-to-onboarding-flow .no-field small,
+    #network-to-onboarding-flow .no-trust-row p,
+    #network-to-onboarding-flow .no-choice p,
+    #network-to-onboarding-flow .no-review-card p,
+    #network-to-onboarding-flow .no-complete-centre p { color: light-dark(#66665e, #bbb8af); }
+    #network-to-onboarding-flow .no-boundary,
+    #network-to-onboarding-flow .no-complete-note { background: light-dark(#f0e9df, #292923); color: light-dark(#5e5d55, #c5c1b8); }
+    #network-to-onboarding-flow .no-boundary svg { color: light-dark(#687b69, #b5c9b7); }
+    #network-to-onboarding-flow input,
+    #network-to-onboarding-flow textarea,
+    #network-to-onboarding-flow select,
+    #network-to-onboarding-flow .no-company-card,
+    #network-to-onboarding-flow .no-choice,
+    #network-to-onboarding-flow .no-compact-option,
+    #network-to-onboarding-flow .no-review-card {
+      border-color: light-dark(#e3dbd0, #3a3b35);
+      background: light-dark(#fffdf9, #20211d);
+    }
+    #network-to-onboarding-flow .no-trust-icon,
+    #network-to-onboarding-flow .no-company-mark { background: light-dark(#e7eee6, #28362c); color: light-dark(#56705b, #b8ceb9); }
+    #network-to-onboarding-flow .no-chip { border-color: transparent; background: light-dark(#eee9e1, #292a25); color: light-dark(#55564f, #cbc8bf); }
+    #network-to-onboarding-flow .no-chip[aria-pressed="true"],
+    #network-to-onboarding-flow .no-choice[aria-pressed="true"],
+    #network-to-onboarding-flow .no-compact-option[aria-pressed="true"] {
+      border-color: light-dark(#aab7a9, #758d78);
+      background: light-dark(#e5ece4, #29382e);
+      color: light-dark(#344c3a, #d3e2d4);
+    }
+    #network-to-onboarding-flow .no-reciprocity,
+    #network-to-onboarding-flow .no-private-card { background: light-dark(#e7eee6, #28362c); color: light-dark(#405b47, #c5d8c7); }
+    #network-to-onboarding-flow .no-reciprocity-icon,
+    #network-to-onboarding-flow .no-private-icon { background: light-dark(#657c68, #aec5b1); color: light-dark(#fffdf8, #1e2a21); }
+    #network-to-onboarding-flow .no-reciprocity p,
+    #network-to-onboarding-flow .no-private-card p { color: light-dark(#586b5b, #b7c9b9); }
+    #network-to-onboarding-flow .no-verified-icon,
+    #network-to-onboarding-flow .no-complete-icon { background: light-dark(#e7eee6, #28362c); color: light-dark(#4d7259, #a9cfb2); }
+
+    @media (prefers-reduced-motion: reduce) {
+      #network-to-onboarding-flow .no-progress-bar,
+      #network-to-onboarding-flow .no-toast { transition: none; }
+    }
+  </style>
+
+  <section class="no-phone">
+    <div class="no-island" aria-hidden="true"></div>
+    <div class="no-status" aria-hidden="true"><span>9:41</span><span><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+    <header class="no-header" hidden>
+      <button class="no-back" type="button" aria-label="Previous step"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
+      <div class="no-progress-wrap"><span class="no-progress-label">Step 1 of 8</span><div class="no-progress" role="progressbar" aria-label="Onboarding progress" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1"><div class="no-progress-bar"></div></div></div>
+      <span style="width:44px" aria-hidden="true"></span>
+    </header>
+
+    <main>
+      <section class="no-screen no-welcome is-active" data-step="0" aria-label="Welcome">
+        <div class="no-brand"><span class="no-brand-mark"><i data-lucide="arrow-left-right" aria-hidden="true"></i></span><span>network.to</span></div>
+        <article class="no-welcome-hero"><div class="no-welcome-icon"><i data-lucide="coffee" aria-hidden="true"></i></div><span class="no-eyebrow">Made for Toronto’s tech community</span><h1>Move toward your goals through people worth knowing.</h1><p>Thoughtful 1:1 introductions across companies and industries, made to become real professional relationships.</p></article>
+        <div class="no-boundary"><i data-lucide="shield-check" aria-hidden="true"></i><span>A quiet professional space—no feed, cold messages, swiping, or dating mechanics.</span></div>
+      </section>
+
+      <section class="no-screen" data-step="1" aria-label="Enter work email">
+        <span class="no-eyebrow">A small trust check</span><h1 style="margin-top:7px">Let’s make sure it’s really you.</h1><p class="no-lead">Use your work email once to keep the community genuine. It stays private.</p>
+        <label class="no-field"><span>Work email</span><div class="no-input-wrap"><i data-lucide="mail" aria-hidden="true"></i><input id="no-work-email" type="email" value="mesbah@meta.com" autocomplete="email" aria-describedby="no-email-help no-email-error" aria-invalid="false"></div><small id="no-email-help">Consumer email addresses such as Gmail, Outlook, and iCloud are not eligible for V1.</small></label>
+        <p class="no-error" id="no-email-error" role="alert">Enter a qualifying company email address.</p>
+        <div class="no-trust-list">
+          <div class="no-trust-row"><span class="no-trust-icon"><i data-lucide="badge-check" aria-hidden="true"></i></span><div><h3>A real work identity</h3><p>We confirm access to a company mailbox—not your title or employer endorsement.</p></div></div>
+          <div class="no-trust-row"><span class="no-trust-icon"><i data-lucide="lock-keyhole" aria-hidden="true"></i></span><div><h3>Private by design</h3><p>Your work email is never shown to other members.</p></div></div>
+        </div>
+      </section>
+
+      <section class="no-screen" data-step="2" aria-label="Verify work email">
+        <span class="no-eyebrow">Check your inbox</span><h1 style="margin-top:7px">Enter the six-digit code.</h1><p class="no-lead">We sent a verification code to <strong>mesbah@meta.com</strong>.</p>
+        <label><span class="sr-only">Verification code</span><input class="no-code" id="no-code" inputmode="numeric" maxlength="6" value="428619"></label>
+        <button class="no-resend" type="button" data-toast="A new code was sent">Send a new code</button>
+        <div class="no-boundary" style="margin-top:25px"><i data-lucide="clock" aria-hidden="true"></i><span>The code expires in 10 minutes. If this is not your mailbox, return and use your own work email.</span></div>
+      </section>
+
+      <section class="no-screen" data-step="3" aria-label="Company verified">
+        <div class="no-verified-hero"><div class="no-verified-icon"><i data-lucide="badge-check" aria-hidden="true"></i></div><span class="no-eyebrow">Company verified</span><h1 style="margin-top:8px">You’re verified at Meta.</h1><p>You demonstrated access to a Meta work email. This does not imply employer endorsement.</p></div>
+        <article class="no-company-card"><span class="no-company-mark">M</span><div><h3>Meta</h3><p>meta.com · Eligible technology company</p></div></article>
+      </section>
+
+      <section class="no-screen" data-step="4" aria-label="Professional identity">
+        <span class="no-eyebrow">Professional identity</span><h1 style="margin-top:7px">How should we introduce you?</h1><p class="no-lead">Keep it concise. You can add deeper professional history later.</p>
+        <div class="no-form-grid">
+          <label class="no-field"><span>Full name</span><input type="text" value="Mesbah Tanvir"></label>
+          <label class="no-field"><span>Current role</span><input type="text" value="Software Engineer"></label>
+          <label class="no-field"><span>City</span><select><option selected>Toronto, Canada</option></select></label>
+          <label class="no-field"><span>Short professional bio</span><textarea>Infrastructure engineer focused on reliable systems and thoughtful developer platforms.</textarea></label>
+        </div>
+      </section>
+
+      <section class="no-screen" data-step="5" aria-label="Professional direction">
+        <span class="no-eyebrow">Where you’re going</span><h1 style="margin-top:7px">What do you want to achieve?</h1><p class="no-lead">Share the direction you care about so we can find experience and perspective that may help you move forward.</p>
+        <label class="no-field"><span>What are you working toward?</span><textarea>Build dependable AI infrastructure that helps smaller product teams turn emerging capabilities into useful products.</textarea><small>Think about the role, impact, craft, or change you want over the next two to three years—not just a title.</small></label>
+        <div class="no-section-label"><h3>Growth interests</h3><span>Choose 2–5</span></div>
+        <div class="no-chip-grid" data-chip-group="growth">
+          <button class="no-chip" type="button" aria-pressed="true">AI infrastructure</button><button class="no-chip" type="button" aria-pressed="true">Technical leadership</button><button class="no-chip" type="button" aria-pressed="true">Early-stage products</button><button class="no-chip" type="button" aria-pressed="false">Staff+ engineering</button><button class="no-chip" type="button" aria-pressed="false">Entrepreneurship</button><button class="no-chip" type="button" aria-pressed="false">Product strategy</button><button class="no-chip" type="button" aria-pressed="false">Engineering management</button><button class="no-chip" type="button" aria-pressed="false">Career transitions</button>
+        </div>
+        <article class="no-reciprocity"><span class="no-reciprocity-icon"><i data-lucide="arrow-left-right" aria-hidden="true"></i></span><div><h3>Introductions are reciprocal</h3><p>We look for people who can help you grow—and who could genuinely benefit from knowing you.</p></div></article>
+      </section>
+
+      <section class="no-screen" data-step="6" aria-label="Expertise and contribution">
+        <span class="no-eyebrow">What you bring</span><h1 style="margin-top:7px">What could you meaningfully share?</h1><p class="no-lead">This is not an endorsement list. Choose topics you could discuss from real experience.</p>
+        <div class="no-section-label"><h3>Expertise and perspective</h3><span>Choose 2–5</span></div>
+        <div class="no-chip-grid" data-chip-group="share">
+          <button class="no-chip" type="button" aria-pressed="true">Distributed systems</button><button class="no-chip" type="button" aria-pressed="true">Engineering at scale</button><button class="no-chip" type="button" aria-pressed="true">Platform reliability</button><button class="no-chip" type="button" aria-pressed="false">Technical interviewing</button><button class="no-chip" type="button" aria-pressed="false">Developer platforms</button><button class="no-chip" type="button" aria-pressed="false">Engineering culture</button><button class="no-chip" type="button" aria-pressed="false">Career transitions</button>
+        </div>
+        <article class="no-reciprocity"><span class="no-reciprocity-icon"><i data-lucide="hand" aria-hidden="true"></i></span><div><h3>No one-sided access</h3><p>A strong introduction has a clear professional reason in both directions.</p></div></article>
+      </section>
+
+      <section class="no-screen" data-step="7" aria-label="Networking and meeting preferences">
+        <span class="no-eyebrow">Beyond your usual circle</span><h1 style="margin-top:7px">Open up your professional world.</h1><p class="no-lead">Cross-company and adjacent-industry perspectives can help useful lessons travel faster. Quality and reciprocity still come first.</p>
+        <div class="no-choice-list" data-choice-group="frequency">
+          <button class="no-choice" type="button" aria-pressed="true"><span class="no-choice-icon"><i data-lucide="calendar-days" aria-hidden="true"></i></span><span><strong>Weekly</strong><p>Up to one worthwhile introduction per week</p></span><i data-lucide="check" aria-hidden="true"></i></button>
+          <button class="no-choice" type="button" aria-pressed="false"><span class="no-choice-icon"><i data-lucide="calendar-range" aria-hidden="true"></i></span><span><strong>Twice monthly</strong><p>A quieter introduction rhythm</p></span><i data-lucide="check" aria-hidden="true"></i></button>
+          <button class="no-choice" type="button" aria-pressed="false"><span class="no-choice-icon"><i data-lucide="gem" aria-hidden="true"></i></span><span><strong>Exceptional only</strong><p>Only unusually strong introductions</p></span><i data-lucide="check" aria-hidden="true"></i></button>
+        </div>
+        <div class="no-compact-grid" data-choice-group="area"><button class="no-compact-option" type="button" aria-pressed="true"><strong>Downtown Toronto</strong><p>Primary work area</p></button><button class="no-compact-option" type="button" aria-pressed="false"><strong>King West</strong><p>Also convenient</p></button></div>
+        <div class="no-compact-grid" data-choice-group="format"><button class="no-compact-option" type="button" aria-pressed="true"><strong>Coffee chat</strong><p>Preferred 1:1 format</p></button><button class="no-compact-option" type="button" aria-pressed="false"><strong>Walk</strong><p>Also comfortable</p></button></div>
+        <div class="no-compact-grid" data-choice-group="reach"><button class="no-compact-option" type="button" aria-pressed="true"><strong>Across companies</strong><p>Learn beyond one organization</p></button><button class="no-compact-option" type="button" aria-pressed="true"><strong>Adjacent industries</strong><p>Bring in relevant outside patterns</p></button></div>
+      </section>
+
+      <section class="no-screen" data-step="8" aria-label="Review professional profile">
+        <span class="no-eyebrow">Review</span><h1 style="margin-top:7px">Your professional context.</h1><p class="no-lead">See what may appear in an introduction and how it supports a useful meeting.</p>
+        <div class="no-review">
+          <article class="no-review-card"><div class="no-review-head"><h3>Professional identity</h3><span class="no-visibility"><i data-lucide="eye" aria-hidden="true"></i>Introduction</span></div><p>Mesbah Tanvir · Software Engineer at Meta ✓ · Toronto</p></article>
+          <article class="no-review-card"><div class="no-review-head"><h3>Professional direction</h3><span class="no-visibility"><i data-lucide="eye" aria-hidden="true"></i>Introduction</span></div><p>Build dependable AI infrastructure that helps smaller product teams turn emerging capabilities into useful products.</p></article>
+          <article class="no-review-card"><div class="no-review-head"><h3>Where you’re growing</h3><span class="no-visibility"><i data-lucide="eye" aria-hidden="true"></i>Introduction</span></div><p>AI infrastructure · Technical leadership · Early-stage products</p></article>
+          <article class="no-review-card"><div class="no-review-head"><h3>What you can share</h3><span class="no-visibility"><i data-lucide="eye" aria-hidden="true"></i>Introduction</span></div><p>Distributed systems · Engineering at scale · Platform reliability</p></article>
+          <article class="no-review-card"><div class="no-review-head"><h3>Meeting context</h3><span class="no-visibility"><i data-lucide="map-pin" aria-hidden="true"></i>Coarse only</span></div><p>Downtown Toronto · Coffee chats · Weekly introductions</p></article>
+        </div>
+      </section>
+
+      <section class="no-screen no-complete" data-step="9" aria-label="Profile ready">
+        <div class="no-complete-centre"><div class="no-complete-icon"><i data-lucide="sparkles" aria-hidden="true"></i></div><span class="no-eyebrow">You’re all set</span><h1 style="margin-top:8px">We’ll find someone worth meeting.</h1><p>No profiles to browse and no pressure to perform. We’ll reach out when there is a thoughtful reason for both of you to meet.</p><div class="no-complete-note"><i data-lucide="file-up" aria-hidden="true"></i><span>You can add a private résumé later if you want to give us more context. You review everything first.</span></div></div>
+      </section>
+    </main>
+
+    <div class="no-bottom"><button class="no-primary" type="button" data-next>Continue with work email</button></div>
+    <div class="no-toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('network-to-onboarding-flow');
+      const screens = [...root.querySelectorAll('[data-step]')];
+      const header = root.querySelector('.no-header');
+      const back = root.querySelector('.no-back');
+      const bottom = root.querySelector('.no-bottom');
+      const next = root.querySelector('[data-next]');
+      const progressLabel = root.querySelector('.no-progress-label');
+      const progress = root.querySelector('.no-progress');
+      const progressBar = root.querySelector('.no-progress-bar');
+      const toast = root.querySelector('.no-toast');
+      const email = root.querySelector('#no-work-email');
+      const emailError = root.querySelector('#no-email-error');
+      let step = 0;
+      let toastTimer;
+
+      const buttonLabels = [
+        'Continue with work email',
+        'Send verification code',
+        'Verify work email',
+        'Continue',
+        'Continue',
+        'Continue',
+        'Continue',
+        'Continue',
+        'Create professional profile',
+        'Enter Today'
+      ];
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 1500);
+      }
+
+      function showStep(index) {
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+        step = Math.max(0, Math.min(index, screens.length - 1));
+        screens.forEach((screen) => {
+          const active = Number(screen.dataset.step) === step;
+          screen.classList.toggle('is-active', active);
+          screen.hidden = !active;
+        });
+        header.hidden = step === 0 || step === 9;
+        back.style.visibility = step > 0 ? 'visible' : 'hidden';
+        const numberedStep = Math.max(1, Math.min(step, 8));
+        progressLabel.textContent = `Step ${numberedStep} of 8`;
+        progress.setAttribute('aria-valuemax', '8');
+        progress.setAttribute('aria-valuenow', String(numberedStep));
+        progressBar.style.width = `${(numberedStep / 8) * 100}%`;
+        next.textContent = buttonLabels[step];
+        bottom.classList.remove('no-two');
+      }
+
+      function validWorkEmail(value) {
+        const normalized = value.trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) return false;
+        const domain = normalized.split('@')[1];
+        return !['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com'].includes(domain);
+      }
+
+      next.addEventListener('click', () => {
+        if (step === 1 && !validWorkEmail(email.value)) {
+          emailError.classList.add('is-visible');
+          email.setAttribute('aria-invalid', 'true');
+          email.focus();
+          return;
+        }
+        emailError.classList.remove('is-visible');
+        email.setAttribute('aria-invalid', 'false');
+        if (step === 9) {
+          showToast('Welcome to Today');
+          return;
+        }
+        showStep(step + 1);
+      });
+
+      back.addEventListener('click', () => showStep(step - 1));
+      root.querySelectorAll('[data-toast]').forEach((button) => button.addEventListener('click', () => showToast(button.dataset.toast)));
+      root.querySelectorAll('.no-chip').forEach((chip) => chip.addEventListener('click', () => chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')));
+      root.querySelectorAll('[data-choice-group]').forEach((group) => {
+        group.querySelectorAll('button').forEach((choice) => choice.addEventListener('click', () => {
+          const exclusive = group.dataset.choiceGroup === 'frequency';
+          if (exclusive) group.querySelectorAll('button').forEach((peer) => peer.setAttribute('aria-pressed', 'false'));
+          choice.setAttribute('aria-pressed', exclusive ? 'true' : choice.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+        }));
+      });
+
+      showStep(0);
+    })();
+  </script>
+</div>
