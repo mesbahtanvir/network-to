@@ -1,40 +1,6 @@
-import {
-  Environment,
-  SignedDataVerifier,
-} from "npm:@apple/app-store-server-library@3.1.0";
-import { Buffer } from "node:buffer";
 import { authenticatedUser, jsonResponse, requiredEnvironment } from "../_shared/http.ts";
-
-const bundleID = "com.mesbahtanvir.networkto";
-const productID = "com.mesbahtanvir.networkto.monthly";
-const appleRoots = [
-  "https://www.apple.com/appleca/AppleIncRootCertificate.cer",
-  "https://www.apple.com/certificateauthority/AppleRootCA-G2.cer",
-  "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
-];
-
-let rootsPromise: Promise<Buffer[]> | undefined;
-
-function loadAppleRoots(): Promise<Buffer[]> {
-  rootsPromise ??= Promise.all(appleRoots.map(async (url) => {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Could not load Apple trust roots");
-    return Buffer.from(await response.arrayBuffer());
-  }));
-  return rootsPromise;
-}
-
-function claimedEnvironment(jws: string): string | undefined {
-  try {
-    const payload = jws.split(".")[1];
-    if (!payload) return undefined;
-    const normalized = payload.replaceAll("-", "+").replaceAll("_", "/");
-    const decoded = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
-    return decoded.environment;
-  } catch {
-    return undefined;
-  }
-}
+import { claimedEnvironment, productID } from "../_shared/app_store_membership.ts";
+import { makeVerifier } from "../_shared/app_store.ts";
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -48,25 +14,11 @@ Deno.serve(async (request) => {
     }
 
     const environmentClaim = claimedEnvironment(signedTransaction);
-    if (environmentClaim !== "Sandbox" && environmentClaim !== "Production") {
+    if (!environmentClaim) {
       return jsonResponse({ error: "Only App Store sandbox or production transactions can be synchronized" }, 422);
     }
 
-    const environment = environmentClaim === "Production" ? Environment.PRODUCTION : Environment.SANDBOX;
-    const appAppleID = environment === Environment.PRODUCTION
-      ? Number(requiredEnvironment("APPLE_APP_ID"))
-      : undefined;
-    if (environment === Environment.PRODUCTION && !Number.isSafeInteger(appAppleID)) {
-      throw new Error("APPLE_APP_ID must be a numeric App Store application identifier");
-    }
-
-    const verifier = new SignedDataVerifier(
-      await loadAppleRoots(),
-      true,
-      environment,
-      bundleID,
-      appAppleID,
-    );
+    const verifier = await makeVerifier(environmentClaim);
     const transaction = await verifier.verifyAndDecodeTransaction(signedTransaction);
 
     if (transaction.productId !== productID) {

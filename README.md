@@ -16,7 +16,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - Notification management through native iPhone Settings
 - One account-scoped free month, followed by a native Apple monthly membership
 - No gender collection, gender filters, or gender-based ranking
-- A production-hardened Supabase backend for Auth, Postgres, RLS, hourly matching, retention, Realtime tables, and Edge Functions
+- A production-hardened Supabase backend for Auth, Postgres, RLS, hourly matching, meetup follow-ups, retention, Realtime tables, APNs delivery, App Store Server Notifications, operations alerting, and Edge Functions
 - Transactional profile setup, retry-safe messaging, and a restart-safe cross-device magic-link flow
 - On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting of identity, role context, expertise, history, education, and demonstrated experience through a rate-limited Supabase Edge Function
 - Deterministic mock data for previews and unit tests
@@ -43,7 +43,7 @@ SUPABASE_PUBLISHABLE_KEY=<local publishable/anon key from supabase status>
 
 See [docs/SUPABASE_BACKEND.md](docs/SUPABASE_BACKEND.md) for local setup, the deployed production architecture, security boundaries, and the external SMTP, résumé-extraction, and APNs launch dependencies.
 
-Hosted Supabase migrations and Edge Functions are deployed only through the repository’s GitHub Actions workflow after validation. Local development commands must not mutate the production project.
+Hosted Supabase migrations and Edge Functions are deployed only through the repository’s GitHub Actions workflow after validation, reaching a staging project first once one is configured. Local development commands must not mutate the production project.
 
 ## Verify
 
@@ -61,4 +61,11 @@ With Docker Desktop running, verify the database separately:
 supabase start
 supabase db reset
 supabase test db
+```
+
+Type-check and unit-test the Edge Functions with Deno:
+
+```sh
+deno check supabase/functions/*/index.ts supabase/functions/_shared/*.ts
+deno test supabase/functions
 ```

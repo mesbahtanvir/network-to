@@ -43,6 +43,7 @@ The migrations create:
 - meetup plans, private feedback, and member-owned connections
 - blocks, reports, private résumé records, device tokens, and notification events
 - private membership state, including the non-resettable account trial and verified App Store entitlement
+- notification delivery bookkeeping, App Store Server Notification records, operational incidents, and posted operations alerts, kept in the private schema or behind service-role-only functions
 
 The native client listens to its RLS-filtered notification-event stream and refreshes relationship state when an introduction becomes mutual, a message arrives, or meetup state changes. It also refreshes when the app returns to the foreground.
 
@@ -80,14 +81,26 @@ Local hook and email-template settings live in `supabase/config.toml`. For a hos
 
 ## Scheduled work and Edge Functions
 
-- Postgres schedules `private.run_matching_batch(25)` hourly at minute 7 and retention maintenance daily at 04:15 UTC through `pg_cron`. Matching outcomes are recorded in `private.matching_runs` for operations review.
+- Postgres schedules five jobs through `pg_cron`: `private.run_matching_batch(25)` hourly at minute 7, `private.run_meetup_followups()` hourly at minute 37, `private.dispatch_notification_delivery()` every minute, `private.run_operations_alerts()` every 15 minutes, and `private.run_retention_maintenance()` daily at 04:15 UTC. Matching outcomes are recorded in `private.matching_runs` for operations review.
 - `auth-handoff`: completes the HTTPS callback server-side, clears its secrets from the browser URL, and relays a single-use PKCE authorization code from a work laptop to the originating iPhone. Its confirmation is intentionally plain text because Supabase Edge Functions rewrite HTML responses as `text/plain`.
-- `delete-account`: verifies the caller, deletes private résumé objects, then deletes the Auth user so database rows cascade.
+- `delete-account`: verifies the caller, deletes private résumé objects, then deletes the Auth user so database rows cascade. Any failure is recorded as an operational incident.
 - `process-resume`: authenticates the member, enforces a durable per-account quota, sends bounded text extracted and contact-redacted on the iPhone to the DeepSeek Responses API, and returns a schema-constrained factual draft for review.
 - `sync-subscription`: authenticates the member, verifies StoreKit 2 signed transaction data against Apple’s certificate chain, bundle ID, product ID, expiry, and account token, then records access through a service-role-only database function.
+- `deliver-notifications`: called by the database schedule with `NOTIFICATION_JOB_SECRET`. It claims due notification events for members with a registered device, sends each through APNs with a token-based (ES256) provider key, retires tokens Apple reports as unregistered, and records every outcome on the event. Requires `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` (the `.p8` contents; escaped newlines are accepted); `APNS_BUNDLE_ID` overrides the default topic.
+- `app-store-notifications`: receives App Store Server Notifications v2, verifies Apple's signature for the claimed environment, maps the notification to a membership state, and records it through an idempotent, order-aware database function.
 - `generate-introductions`: an optional manual operations endpoint protected by `MATCHING_JOB_SECRET`; it is not required for the scheduled production path and does not need to be deployed by default.
 
 `auth-handoff` also applies durable, salted IP rate limits. Generate a separate random 256-bit `HANDOFF_RATE_LIMIT_SALT`; never reuse a signing, database, or Apple key.
+
+Scheduled HTTP calls read their configuration from Supabase Vault, so no secret or project URL lives in a migration. Create these once per project from the SQL editor:
+
+```sql
+select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+select vault.create_secret('<random 256-bit secret>', 'notification_job_secret');
+select vault.create_secret('https://hooks.example.com/services/...', 'ops_alert_webhook_url');
+```
+
+`notification_job_secret` must equal the `NOTIFICATION_JOB_SECRET` function secret. Until `project_url` and `notification_job_secret` exist the dispatcher stays idle, and until `ops_alert_webhook_url` exists alerts stay pending; nothing fails loudly in a project that has not been configured yet.
 
 ## Production deployment
 
@@ -99,7 +112,9 @@ Create a protected GitHub environment named `production` and add these encrypted
 - `SUPABASE_DB_PASSWORD`: the production project database password
 - `SUPABASE_PROJECT_ID`: the production project reference
 
-Pull requests that touch `supabase/**` start a local database, run the pgTAP suite, and type-check every Edge Function. A push to `main` deploys only after that validation passes: migrations are applied first, followed by `auth-handoff`, `delete-account`, `process-resume`, and `sync-subscription`. `generate-introductions` is deliberately excluded because the database schedule is the production matching path.
+Pull requests that touch `supabase/**` or the workflow start a local database, run the pgTAP suite, type-check every Edge Function, and run the Deno unit tests. A push to `main` deploys only after that validation passes, and only from `main`, even for manual runs. Each deployment applies migrations first, then deploys `auth-handoff`, `app-store-notifications`, and `deliver-notifications` without gateway JWT verification because each authenticates its caller itself, then `delete-account`, `process-resume`, and `sync-subscription`. `generate-introductions` is deliberately excluded because the database schedule is the production matching path.
+
+Deployments reach staging before production. Create a second Supabase project and a GitHub environment named `staging` holding the same three secret names for that project. Until those secrets exist, the staging job reports that it was skipped and production proceeds, so the pipeline works with one project today and two later.
 
 Server-side function secrets are still configured separately in the Supabase Dashboard. They are not copied into GitHub unless a future workflow explicitly manages secret rotation.
 
@@ -115,7 +130,15 @@ Supabase provides its URL and server-side keys to deployed functions. The databa
 
 ## Notifications
 
-Notification preferences and permission remain in native iPhone Settings, as intended. Supabase stores validated device registrations and creates deduplicated notification events. Actual remote delivery must still cross Apple Push Notification service; APNs is the unavoidable Apple transport boundary, not a second application backend. Device registration from the signed app and an APNs-delivery function can be enabled after an Apple Push Notification key, key ID, and team ID are available.
+Notification preferences and permission remain in native iPhone Settings, as intended. Supabase stores validated device registrations, creates deduplicated notification events, and delivers them:
+
+- `private.dispatch_notification_delivery()` runs every minute. When an event is due for a member with a registered device, it posts to `deliver-notifications` through `pg_net` using the Vault secrets above; otherwise it does nothing.
+- `claim_notification_deliveries` hands the function a bounded batch and counts each claim as an attempt, so failures back off exponentially and stop after eight attempts. `complete_notification_delivery` records success or the last error, and `retire_device_token` removes tokens APNs reports as unregistered. All three are service-role-only.
+- Payloads carry only identifiers and calm copy. A pending introduction stays anonymous, message bodies are never pushed, and a Pass never notifies anyone.
+- Meetups become `feedback_due` three hours after their scheduled start and both participants receive one `feedback_due` event, so private feedback is requested even when nobody reopens the conversation.
+- Undelivered events stay available to the in-app stream and are removed after 90 days.
+
+Delivery needs an APNs authentication key from the Apple Developer account: set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets and never place the key in iOS. Until they are set, claimed events fail with "APNs is not configured", which the operations alert surfaces. The iOS app still has to request permission, register for remote notifications, and call `register_device_token` with the APNs token; that is the remaining client step.
 
 ## Membership and App Store setup
 
@@ -127,7 +150,7 @@ Create one auto-renewable monthly subscription in App Store Connect with product
 supabase secrets set APPLE_APP_ID=<numeric-app-store-id>
 ```
 
-The app sends StoreKit’s JWS transaction after purchase, restore, and authenticated launch. The server rejects Xcode-local transactions, cross-account transaction replay, the wrong bundle or product, revoked receipts, and unverified payloads. Before release, configure App Store Server Notifications v2 so renewals, cancellations, billing retry, grace period, and refunds update membership even when the app is not opened.
+The app sends StoreKit’s JWS transaction after purchase, restore, and authenticated launch. The server rejects Xcode-local transactions, cross-account transaction replay, the wrong bundle or product, revoked receipts, and unverified payloads. Renewals, cancellations, billing retry, grace periods, and refunds update membership even when the app is closed: point both the production and sandbox server notification URLs in App Store Connect (version 2) at `https://<project-ref>.supabase.co/functions/v1/app-store-notifications`. The function verifies each payload against Apple's certificate chain, bundle ID, environment, and app ID, then `record_app_store_notification` applies it once. Redelivered notifications return `duplicate`, notifications older than the state already applied return `stale`, notifications for unknown members or other products are recorded but ignored, and failures are recorded for alerting. Members are matched by the `appAccountToken` the app attaches at purchase, falling back to the original transaction already on file. A verified transaction for a member without a membership row never starts a free month.
 
 ## Résumé handling
 
@@ -143,18 +166,22 @@ Set `DEEPSEEK_API_KEY` as a Supabase function secret to enable live drafting. `D
 
 Already implemented:
 
-- Nine hosted migrations, RLS, private schemas, transactional profile writes, idempotent messages, account-scoped trials, same-city subscription-aware matching schedules, retention, and Edge Function abuse controls.
+- Thirteen migrations, RLS, private schemas, transactional profile writes, idempotent messages, account-scoped trials, same-city subscription-aware matching schedules, meetup follow-ups, notification delivery bookkeeping, App Store Server Notification handling, retention, and Edge Function abuse controls.
 - Hosted `auth-handoff`, `delete-account`, `process-resume`, and `sync-subscription` functions, plus a live cross-device handoff smoke test.
+- `deliver-notifications` and `app-store-notifications` functions, driven by the database schedule and Apple respectively, each authenticating its own caller.
+- Operations alerts for failed or stalled matching, repeated notification delivery failures, App Store notifications that could not be applied, new member reports, and account-deletion failures, posted once each to a Vault-configured webhook.
+- CI validation with pgTAP and Deno unit tests, and a staging-then-production deployment path that deploys only from `main`.
 - Database behavior and authorization coverage for two isolated users; run `supabase test db` before each deployment.
 - The initial 40-company big-tech and established adjacent-company domain registry.
 
 Required before a public App Store launch:
 
 - Configure custom SMTP and verify delivery from representative corporate inboxes.
-- Create the App Store Connect subscription, set `APPLE_APP_ID`, add final hosted Terms and Privacy URLs, and enable App Store Server Notifications v2.
-- Add APNs credentials as function secrets and enable signed-device registration and delivery; never expose the APNs private key to iOS.
+- Create the App Store Connect subscription, set `APPLE_APP_ID`, add final hosted Terms and Privacy URLs, and point App Store Server Notifications v2 (production and sandbox) at the deployed `app-store-notifications` function.
+- Create an APNs authentication key, set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets, and add remote-notification registration to the iOS app (request permission, register, call `register_device_token`); never expose the APNs private key to iOS.
+- Create the Vault secrets `project_url`, `notification_job_secret`, and `ops_alert_webhook_url`, and set the matching `NOTIFICATION_JOB_SECRET` function secret.
 - Complete privacy and data-processing review for DeepSeek before inviting public users, and disclose that redacted résumé text is processed by the provider.
-- Deploy from CI to separate staging and production projects and alert on failed matching runs, notification delivery, reports, and deletion failures.
+- Create the staging Supabase project and the `staging` GitHub environment so every `main` deployment reaches staging before production.
 - Review the company-domain registry operationally and add CAPTCHA or additional Auth abuse controls if observed traffic warrants it.
 - Keep the service-role key restricted to trusted server-side functions and jobs.
 

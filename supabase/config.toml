@@ -388,6 +388,19 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Functions whose callers cannot present a Supabase JWT authenticate themselves:
+# auth-handoff serves browser callbacks, app-store-notifications verifies Apple's
+# signature, and deliver-notifications checks the shared job secret. Production
+# deployments pass --no-verify-jwt for the same three functions.
+[functions.auth-handoff]
+verify_jwt = false
+
+[functions.app-store-notifications]
+verify_jwt = false
+
+[functions.deliver-notifications]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 55327

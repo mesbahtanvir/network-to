@@ -1,4 +1,5 @@
 import { authenticatedUser, jsonResponse, requiredEnvironment } from "../_shared/http.ts";
+import { recordOperationalIncident } from "../_shared/incidents.ts";
 
 Deno.serve(async (request) => {
   if (request.method !== "DELETE") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -17,6 +18,11 @@ Deno.serve(async (request) => {
       { headers: adminHeaders },
     );
     if (!resumeResponse.ok) {
+      await recordOperationalIncident(
+        "account_deletion_failed",
+        `Could not enumerate private résumé records (HTTP ${resumeResponse.status})`,
+        user.id,
+      );
       return jsonResponse({ error: "Could not enumerate private files before deletion" }, 500);
     }
     const resumes: Array<{ storage_path: string }> = await resumeResponse.json();
@@ -27,6 +33,11 @@ Deno.serve(async (request) => {
         headers: adminHeaders,
       });
       if (!storageResponse.ok && storageResponse.status !== 404) {
+        await recordOperationalIncident(
+          "account_deletion_failed",
+          `Could not delete a private résumé object (HTTP ${storageResponse.status})`,
+          user.id,
+        );
         return jsonResponse({ error: "Could not delete a private file; account deletion was stopped" }, 500);
       }
     }
@@ -36,6 +47,11 @@ Deno.serve(async (request) => {
       headers: adminHeaders,
     });
     if (!response.ok) {
+      await recordOperationalIncident(
+        "account_deletion_failed",
+        `Auth admin deletion returned HTTP ${response.status}`,
+        user.id,
+      );
       return jsonResponse({ error: "Account deletion failed", detail: await response.text() }, 500);
     }
     return new Response(null, { status: 204 });
