@@ -5,8 +5,12 @@
 ### I. One Introduction, Never a Feed
 
 network.to offers ambitious professionals in North American cities one selective, same-city
-introduction at a time, aimed at cross-company and cross-industry relationships. Every rule
-below protects that shape.
+introduction at a time, aimed at cross-company and cross-industry relationships. It is built
+for the newcomer builder: someone who recently moved to a big city, works in technology, and
+wants like-minded people with shared goals and things to do together, building genuine
+relationships slowly and in person rather than seeking quick interactions, with no romantic
+or sexual framing. The audience starts with technology and widens only by product decision
+(`docs/PRODUCT_DEFINITION.md`). Every rule below protects that shape.
 
 - Today MUST present at most one introduction or one single most useful next action. It MUST
   NOT render a list, queue, carousel, or infinite scroll of candidates, and MUST NOT invite
@@ -225,6 +229,36 @@ leaked server key defeats every other control in this document.
 Rationale: no CI job builds the iOS app and Supabase changes reach production automatically
 from `main`, so the listed commands and named tests are the only evidence that a change works.
 
+### VIII. Calm Technology
+
+network.to is calm technology in the sense of Weiser, Brown, and Case: it requires the least
+attention, informs without alarming, and gets out of the way so two people can meet. The
+design philosophy in `docs/DESIGN_PHILOSOPHY.md` is binding.
+
+- Every surface MUST require the smallest amount of attention that completes the member's
+  next action, and the app MUST give no reason to be opened when nothing has changed: no
+  streaks, check-ins, content to consume, or engagement prompts.
+- Copy and states MUST inform and create calm: plain professional language, no exclamation
+  points, no urgency, no countdowns, honest waiting and empty states, and errors that say what
+  was saved, what was not, and what the member can do.
+- Status MUST live in the periphery: quiet status pills, badges that count only actionable
+  items, and company marks. Nothing MAY pulse, bounce, loop, or animate to attract attention,
+  and the app MUST NOT play its own sounds.
+- The product MUST amplify people rather than imitate them: it introduces and steps back,
+  explains relevance in the member's own context, shows no scores or AI branding, and never
+  writes a member's goals for them.
+- Every feature MUST work when it fails: offline states that say whether an action was saved,
+  queued, or not submitted; visual elements with a native fallback (a monogram when a mark
+  cannot load); server jobs that record failures instead of crashing.
+- Every feature MUST use the minimum technology that solves the problem and MUST respect
+  professional social norms: private interest, socially inexpensive passing, honest
+  verification wording, reachable but unobtrusive safety actions.
+- Every spec and plan MUST include a Calm Technology check answering the questions at the end
+  of `docs/DESIGN_PHILOSOPHY.md`; a proposal that fails one MUST be redesigned or dropped.
+
+Rationale: the product's purpose is to get two people to meet in person. Anything that holds
+attention inside the app, alarms, or performs is working against that purpose.
+
 ## Product and Platform Constraints
 
 - Client: SwiftUI, iOS 17.0 minimum, iPhone only, Xcode 26, Swift 6 with strict concurrency,
@@ -234,6 +268,10 @@ from `main`, so the listed commands and named tests are the only evidence that a
   `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the environment first, then Info.plist.
 - Membership: one account-scoped free month beginning at onboarding completion, then the
   monthly product `com.mesbahtanvir.networkto.monthly` at Apple's localized price.
+- Company registry: `company_domains` lists well-known North American technology companies
+  and employers; expansion is a product decision recorded in a migration. Each approved
+  company SHOULD have a company mark served by the product backend; the client MUST fall back
+  to a monogram and MUST NOT fetch marks from any third-party service.
 - Backend: Supabase Auth (PKCE magic link, Before User Created hook), Postgres with RLS and
   `security definer` RPCs, Realtime limited to `conversations`, `messages`, `meetups`, and
   `notification_events`, Deno Edge Functions under `supabase/functions/<name>/index.ts` with
@@ -272,18 +310,18 @@ from `main`, so the listed commands and named tests are the only evidence that a
 
 ## Development Workflow and Quality Gates
 
-- Specification gate: every feature spec MUST name the principles it touches by numeral,
-  confirm it reveals no one-sided decision to the other member, and name the retention rule
-  for any new operational table. A spec that adds a fifth tab, a browse or search surface, a
-  score, a rejection notification, a gender field, group events, or any way to message
-  without mutual interest MUST be rejected; admitting one requires a MAJOR amendment first.
-  New member-facing copy MUST use the canonical vocabulary.
-- Plan gate: every plan MUST state, for each new table, RPC, Edge Function, or notification,
-  the RLS policy and grants, the privilege assertions to add, where any secret lives, the
-  exact push payload, the idempotency key, and the retention rule. It MUST list the state
-  matrix and offline states for every new surface, the XCTest, pgTAP, and Deno tests it will
-  add, and any new scheduled job with its `network-to-` name. A plan that trusts the client
-  for an authorization or membership decision MUST be sent back.
+- Specification gate: every feature spec MUST name the principles it touches by numeral, confirm it
+  reveals no one-sided decision to the other member, include the Calm Technology check (Principle
+  VIII), and name the retention rule for any new operational table. A spec that adds a fifth tab, a
+  browse or search surface, a score, a rejection notification, a gender field, group events, or any
+  way to message without mutual interest MUST be rejected; admitting one requires a MAJOR amendment
+  first. New member-facing copy MUST use the canonical vocabulary.
+- Plan gate: every plan MUST state, for each new table, RPC, Edge Function, or notification, the
+  RLS policy and grants, the privilege assertions to add, where any secret lives, the exact push
+  payload, the idempotency key, and the retention rule. It MUST list the state matrix and offline
+  states for every new surface, the XCTest, pgTAP, and Deno tests it will add, any new scheduled
+  job with its `network-to-` name, and the Calm Technology check. A plan that trusts the client for
+  an authorization or membership decision MUST be sent back.
 - Pull request gate: tests land in the same PR as the behaviour they protect. Because no CI
   builds the iOS app, a PR touching `NetworkTo/` or `NetworkToTests/` MUST record an Xcode
   test pass before merge, and the reviewer MUST verify tokens and `NT` naming, canonical copy,
@@ -327,7 +365,8 @@ Compliance review happens at the specification, plan, and pull request gates abo
 reviewer who blocks MUST cite the principle by numeral. Complexity beyond the constraints
 section MUST be justified in the plan alongside the simpler alternative that was rejected.
 Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
-`docs/UI_DESIGN_SPEC.md`, `docs/COMPONENT_STATE_SHEET.md`, and `docs/ACCESSIBILITY_REVIEW.md`,
-which MUST be updated in the same PR as any change that alters what they describe.
+`docs/UI_DESIGN_SPEC.md`, `docs/COMPONENT_STATE_SHEET.md`, `docs/ACCESSIBILITY_REVIEW.md`,
+`docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
+same PR as any change that alters what they describe.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
+**Version**: 1.1.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11

@@ -43,6 +43,8 @@ SUPABASE_PUBLISHABLE_KEY=<local publishable/anon key from supabase status>
 
 See [docs/SUPABASE_BACKEND.md](docs/SUPABASE_BACKEND.md) for local setup, the deployed production architecture, security boundaries, and the external SMTP, résumé-extraction, and APNs launch dependencies.
 
+Who the product is for and how the audience widens is defined in [docs/PRODUCT_DEFINITION.md](docs/PRODUCT_DEFINITION.md). The design philosophy is calm technology, defined in [docs/DESIGN_PHILOSOPHY.md](docs/DESIGN_PHILOSOPHY.md). Both are binding through [the constitution](.specify/memory/constitution.md), which every feature spec and plan under `specs/` is checked against.
+
 Hosted Supabase migrations and Edge Functions are deployed only through the repository’s GitHub Actions workflow after validation, reaching a staging project first once one is configured. Local development commands must not mutate the production project.
 
 ## Verify
