@@ -308,6 +308,27 @@ enum IntroductionPhase: Equatable, Sendable {
 }
 
 extension ProfessionalProfile {
+    static let empty = ProfessionalProfile(
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
+        name: "",
+        role: "",
+        company: "",
+        city: "",
+        topics: [],
+        bio: "",
+        roleScope: "",
+        currentFocus: "",
+        yearsExperience: "",
+        growthAreas: [],
+        professionalAmbition: "",
+        growthInterest: "",
+        contributionAreas: [],
+        helpFormats: [],
+        contribution: "",
+        contributionBoundaries: "",
+        isWorkEmailVerified: false
+    )
+
     static let sarah = ProfessionalProfile(
         id: UUID(uuidString: "B697877E-57A3-4A9F-8D01-85770F426128")!,
         name: "Sarah Chen",

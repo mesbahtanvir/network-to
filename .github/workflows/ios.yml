@@ -1,0 +1,66 @@
+name: iOS
+
+on:
+  pull_request:
+    paths:
+      - "NetworkTo/**"
+      - "NetworkToTests/**"
+      - "NetworkTo.xcodeproj/**"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [main]
+    paths:
+      - "NetworkTo/**"
+      - "NetworkToTests/**"
+      - "NetworkTo.xcodeproj/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-release-build:
+    name: Test and compile Release
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Resolve pinned Swift packages
+        run: xcodebuild -resolvePackageDependencies -project NetworkTo.xcodeproj -scheme NetworkTo
+
+      - name: Select an available iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          simulator_id="$(xcrun simctl list devices available -j | jq -r '[.devices[] | .[] | select(.isAvailable == true and (.name | startswith("iPhone")))][0].udid')"
+          if [[ -z "$simulator_id" || "$simulator_id" == "null" ]]; then
+            echo "::error::No available iPhone simulator was found on the runner."
+            exit 1
+          fi
+          echo "id=$simulator_id" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: >-
+          xcodebuild
+          -project NetworkTo.xcodeproj
+          -scheme NetworkTo
+          -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}'
+          test
+
+      - name: Compile production configuration
+        run: >-
+          xcodebuild
+          -project NetworkTo.xcodeproj
+          -scheme NetworkTo
+          -configuration Release
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build

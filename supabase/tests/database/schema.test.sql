@@ -1,5 +1,5 @@
 begin;
-select plan(60);
+select plan(64);
 
 insert into public.company_domains (domain, company_name, industry, status)
 values ('shopify.com', 'Shopify', 'Commerce technology', 'approved')
@@ -171,6 +171,10 @@ select is(
   'eligible',
   'established adjacent AI-company domains are eligible at launch'
 );
+select is((select count(*) from public.company_domains where domain = 'orbitsystems.com'), 0::bigint, 'Orbit Systems fixture is absent');
+select is((select count(*) from public.company_domains where domain = 'northstar.ai'), 0::bigint, 'Northstar AI fixture is absent');
+select is((select count(*) from public.company_domains where domain = 'harbourlabs.com'), 0::bigint, 'Harbour Labs fixture is absent');
+select is((select count(*) from public.company_domains where domain = 'newventurelabs.ca'), 0::bigint, 'New Venture Labs fixture is absent');
 
 select * from finish();
 rollback;

@@ -34,7 +34,7 @@ struct TodayView: View {
 
     private var greeting: some View {
         VStack(alignment: .leading, spacing: NTSpacing.xs) {
-            Text("Good afternoon, Alex")
+            Text("\(daypartGreeting), \(store.member.firstName.isEmpty ? "there" : store.member.firstName)")
                 .font(.headline)
             Text("One worthwhile conversation is enough.")
                 .font(.subheadline)
@@ -95,7 +95,7 @@ struct TodayView: View {
                 upcomingMeetup(detail)
             } else {
                 Button { store.selectedTab = .messages } label: {
-                    statusCard(symbol: "cup.and.saucer.fill", title: "Keep the momentum human", detail: "Your conversation with Sarah is open in Messages.")
+                    statusCard(symbol: "cup.and.saucer.fill", title: "Keep the momentum human", detail: "Your conversation with \(activePersonName) is open in Messages.")
                 }
                 .buttonStyle(.plain)
             }
@@ -105,7 +105,7 @@ struct TodayView: View {
             }
             .buttonStyle(.plain)
         case .connected:
-            statusCard(symbol: "checkmark.circle.fill", title: "A new connection", detail: "Sarah is now in Connections, along with the context that brought you together.")
+            statusCard(symbol: "checkmark.circle.fill", title: "A new connection", detail: "\(activePersonName) is now in Connections, along with the context that brought you together.")
         case .passed:
             passedState
         case .searching:
@@ -136,7 +136,7 @@ struct TodayView: View {
     private func upcomingMeetup(_ detail: String) -> some View {
         VStack(alignment: .leading, spacing: NTSpacing.md) {
             NTStatusPill(text: "UPCOMING COFFEE", symbol: "calendar.badge.checkmark", tint: NTColor.meeting)
-            Text("You’re meeting Sarah").font(.title2.weight(.semibold))
+            Text("You’re meeting \(activePersonName)").font(.title2.weight(.semibold))
             Label(detail, systemImage: "mappin.and.ellipse")
                 .foregroundStyle(NTColor.textSecondary)
             Button("Open conversation") { store.selectedTab = .messages }
@@ -145,6 +145,20 @@ struct TodayView: View {
         .padding(NTSpacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
         .ntSurface(radius: NTRadius.hero)
+    }
+
+    private var activePersonName: String {
+        store.conversation?.person.firstName
+            ?? store.connections.first?.person.firstName
+            ?? "your connection"
+    }
+
+    private var daypartGreeting: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<12: "Good morning"
+        case 12..<17: "Good afternoon"
+        default: "Good evening"
+        }
     }
 
     private var introductionReady: some View {

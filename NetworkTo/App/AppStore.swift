@@ -18,7 +18,7 @@ final class AppStore: ObservableObject {
     @Published var transientMessage: String?
     @Published private(set) var resumeImportError: String?
     @Published private(set) var resumeImportStage: ResumeImportStage = .readingDocument
-    @Published private(set) var verifiedWorkEmail = "alex@orbitsystems.com"
+    @Published private(set) var verifiedWorkEmail: String
 
     @Published private(set) var member: ProfessionalProfile
     @Published private(set) var introduction: Introduction
@@ -37,17 +37,19 @@ final class AppStore: ObservableObject {
         backend: (any BackendService)? = nil
     ) {
         let resolvedBackend = backend ?? BackendFactory.make()
+        let usesMockBackend = !resolvedBackend.isLive
         self.defaults = defaults
         self.backend = resolvedBackend
-        self.phase = startPhase
+        self.phase = resolvedBackend.isLive ? .searching : startPhase
         self.hasAuthenticated = hasAuthenticated ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.authenticationKey))
         self.hasCompletedOnboarding = hasCompletedOnboarding ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.onboardingKey))
-        self.connections = seedMockData ? MockData.bootstrap.connections : []
-        self.member = .currentMember
+        self.verifiedWorkEmail = usesMockBackend ? "alex@orbitsystems.com" : ""
+        self.connections = seedMockData && usesMockBackend ? MockData.bootstrap.connections : []
+        self.member = usesMockBackend ? .currentMember : .empty
         self.networkingPreferences = MockData.bootstrap.networkingPreferences
         self.meetingPreferences = MockData.bootstrap.meetingPreferences
         self.safetyPreferences = MockData.bootstrap.safetyPreferences
-        self.membership = membership ?? MockData.bootstrap.membership
+        self.membership = membership ?? (usesMockBackend ? MockData.bootstrap.membership : .notStarted)
         #if DEBUG
         let launchArguments = ProcessInfo.processInfo.arguments
         let isOnboardingPreview = launchArguments.contains(where: { $0.hasPrefix("--onboarding-step=") })
@@ -75,7 +77,16 @@ final class AppStore: ObservableObject {
         #else
         self.selectedTab = .today
         #endif
-        self.introduction = MockData.introduction
+        self.introduction = usesMockBackend
+            ? MockData.introduction
+            : Introduction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
+                person: .empty,
+                reasonForYou: "",
+                reasonForThem: "",
+                meetingContext: "",
+                createdAt: .distantPast
+            )
         #if DEBUG
         if launchArguments.contains("--resume-review-preview") {
             self.hasAuthenticated = true
@@ -154,7 +165,6 @@ final class AppStore: ObservableObject {
             meetingPreferences = data.meetingPreferences
             safetyPreferences = data.safetyPreferences
             membership = data.membership
-            membership = data.membership
             availability = data.availability
             hasCompletedOnboarding = data.onboardingComplete
             if data.conversation != nil {
@@ -222,7 +232,6 @@ final class AppStore: ObservableObject {
             do {
                 try await backend.saveProfile(member, onboardingComplete: true)
                 hasCompletedOnboarding = true
-                if !backend.isLive { membership = .trial() }
                 if !backend.isLive { membership = .trial() }
                 defaults.set(true, forKey: Self.onboardingKey)
                 startBackendUpdates()
@@ -612,7 +621,7 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func deleteMockAccount() {
+    func deleteAccount() {
         if backend.isLive {
             Task {
                 do {

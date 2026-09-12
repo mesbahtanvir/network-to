@@ -274,7 +274,7 @@ struct ConversationView: View {
             if message.author == .introduction { Spacer(minLength: 54) }
         }
         .frame(maxWidth: .infinity)
-        .accessibilityLabel("\(message.author == .member ? "You" : store.introduction.person.name): \(message.body)")
+        .accessibilityLabel("\(message.author == .member ? "You" : store.conversation?.person.name ?? "Connection"): \(message.body)")
     }
 
     @ViewBuilder
@@ -333,7 +333,7 @@ struct ConversationView: View {
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: NTSpacing.sm) {
-            TextField("Message Sarah", text: $draft, axis: .vertical)
+            TextField("Message \(store.conversation?.person.firstName ?? "your connection")", text: $draft, axis: .vertical)
                 .lineLimit(1...5)
                 .focused($composerFocused)
                 .padding(.horizontal, NTSpacing.md)
@@ -401,7 +401,7 @@ private struct MeetupFeedbackView: View {
                         .accessibilityValue(outcome == item ? "Selected" : "Not selected")
                     }
                     if let outcome, outcome != .didNotMeet {
-                        Toggle("Stay connected with Sarah", isOn: $stayConnected)
+                        Toggle("Stay connected with \(store.conversation?.person.firstName ?? "this person")", isOn: $stayConnected)
                             .font(.headline)
                             .padding(NTSpacing.md)
                             .ntSurface(radius: NTRadius.field)

@@ -157,3 +157,9 @@ Required before a public App Store launch:
 - Deploy from CI to separate staging and production projects and alert on failed matching runs, notification delivery, reports, and deletion failures.
 - Review the company-domain registry operationally and add CAPTCHA or additional Auth abuse controls if observed traffic warrants it.
 - Keep the service-role key restricted to trusted server-side functions and jobs.
+
+## Production data hygiene
+
+Repository fixture identities and fictional company domains are never valid production members. Migration `20260911031054_remove_production_fixture_data.sql` removes only those exact fixtures and immediately applies the existing retention policy. It deliberately preserves incomplete onboarding accounts, inactive profiles, and real-company accounts because none of those states proves that a member is disposable.
+
+The cleanup aborts if a fixture identity owns a Storage object. Storage objects must be removed through the Storage API before deleting the Auth user so the underlying object is deleted along with its metadata. Future production cleanup must follow the same rule: use an explicit reviewed identity set, never a broad condition such as age, inactivity, or incomplete onboarding.

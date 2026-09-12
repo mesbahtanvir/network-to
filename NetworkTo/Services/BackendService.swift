@@ -111,18 +111,50 @@ struct SupabaseConfiguration: Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         bundle: Bundle = .main
     ) -> SupabaseConfiguration? {
-        let rawURL = environment["SUPABASE_URL"]
+        let rawURL = (environment["SUPABASE_URL"]
             ?? bundle.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
-        let rawKey = environment["SUPABASE_PUBLISHABLE_KEY"]
+        )?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawKey = (environment["SUPABASE_PUBLISHABLE_KEY"]
             ?? bundle.object(forInfoDictionaryKey: "SUPABASE_PUBLISHABLE_KEY") as? String
+        )?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let rawURL,
               let rawKey,
               !rawURL.isEmpty,
               !rawKey.isEmpty,
               !rawURL.contains("$("),
               !rawKey.contains("$("),
-              let url = URL(string: rawURL) else { return nil }
+              let url = URL(string: rawURL),
+              let scheme = url.scheme?.lowercased(),
+              let host = url.host?.lowercased(),
+              scheme == "https" || (scheme == "http" && ["127.0.0.1", "localhost"].contains(host)),
+              rawKey.hasPrefix("sb_publishable_") || rawKey.hasPrefix("eyJ") else { return nil }
         return SupabaseConfiguration(url: url, publishableKey: rawKey)
+    }
+}
+
+private actor UnavailableBackendService: BackendService {
+    nonisolated let isLive = true
+
+    func hasValidSession() async -> Bool { false }
+    func bootstrap() async throws -> BackendSnapshot { throw BackendConfigurationError.invalid }
+    func validateCompany(email: String) async throws -> CompanyDomainDecision { throw BackendConfigurationError.invalid }
+    func sendMagicLink(to email: String, shouldCreateUser: Bool) async throws -> MagicLinkRequest { throw BackendConfigurationError.invalid }
+    func signOut() async throws {}
+    func deliverMessage(_ body: String, conversationID: UUID?, idempotencyKey: UUID) async throws { throw BackendConfigurationError.invalid }
+    func processResume(
+        fileURL: URL,
+        progress: @escaping @Sendable (ResumeImportStage) async -> Void
+    ) async throws -> ProfileImportSuggestions? { throw BackendConfigurationError.invalid }
+    func submitReport(category: ReportCategory, note: String, subjectID: UUID?, conversationID: UUID?) async throws {
+        throw BackendConfigurationError.invalid
+    }
+}
+
+private enum BackendConfigurationError: LocalizedError {
+    case invalid
+
+    var errorDescription: String? {
+        "network.to could not connect securely. Install the latest build or contact support."
     }
 }
 
@@ -135,9 +167,7 @@ enum BackendFactory {
             return MockBackendService()
         }
         #endif
-        guard let configuration = SupabaseConfiguration.load() else {
-            return MockBackendService()
-        }
+        guard let configuration = SupabaseConfiguration.load() else { return UnavailableBackendService() }
         return SupabaseBackendService(configuration: configuration)
     }
 }

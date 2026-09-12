@@ -266,4 +266,46 @@ final class AppStoreTests: XCTestCase {
         store.lookAgain()
         XCTAssertEqual(store.phase, .searching)
     }
+
+    func testLiveBackendStartsWithoutDemoIdentityOrConnections() {
+        let defaults = UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!
+        let backend = SupabaseBackendService(configuration: SupabaseConfiguration(
+            url: URL(string: "https://example.supabase.co")!,
+            publishableKey: "sb_publishable_test"
+        ))
+
+        let store = AppStore(
+            defaults: defaults,
+            hasAuthenticated: false,
+            hasCompletedOnboarding: false,
+            backend: backend
+        )
+
+        XCTAssertTrue(store.isUsingLiveBackend)
+        XCTAssertEqual(store.member, .empty)
+        XCTAssertTrue(store.connections.isEmpty)
+        XCTAssertEqual(store.verifiedWorkEmail, "")
+        XCTAssertEqual(store.phase, .searching)
+    }
+
+    func testSupabaseConfigurationRejectsRemotePlaintextAndBuildPlaceholders() {
+        XCTAssertNil(SupabaseConfiguration.load(environment: [
+            "SUPABASE_URL": "http://example.supabase.co",
+            "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_test"
+        ]))
+        XCTAssertNil(SupabaseConfiguration.load(environment: [
+            "SUPABASE_URL": "$(SUPABASE_URL)",
+            "SUPABASE_PUBLISHABLE_KEY": "$(SUPABASE_PUBLISHABLE_KEY)"
+        ]))
+    }
+
+    func testSupabaseConfigurationAcceptsSecureProductionValues() {
+        let configuration = SupabaseConfiguration.load(environment: [
+            "SUPABASE_URL": " https://example.supabase.co ",
+            "SUPABASE_PUBLISHABLE_KEY": " sb_publishable_test "
+        ])
+
+        XCTAssertEqual(configuration?.url.absoluteString, "https://example.supabase.co")
+        XCTAssertEqual(configuration?.publishableKey, "sb_publishable_test")
+    }
 }

@@ -164,11 +164,13 @@ struct ProfileView: View {
                 settingsRow("person.crop.circle", "Account", "Sign out or delete account", showChevron: true)
             }
             .buttonStyle(.plain)
-            Divider().padding(.leading, 44)
-            Button(role: .destructive) { showingResetConfirmation = true } label: {
-                settingsRow("arrow.counterclockwise", "Restart product demo", "Clear local progress", tint: NTColor.destructive)
+            if !store.isUsingLiveBackend {
+                Divider().padding(.leading, 44)
+                Button(role: .destructive) { showingResetConfirmation = true } label: {
+                    settingsRow("arrow.counterclockwise", "Restart product demo", "Clear local progress", tint: NTColor.destructive)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(NTSpacing.lg)
         .ntSurface()

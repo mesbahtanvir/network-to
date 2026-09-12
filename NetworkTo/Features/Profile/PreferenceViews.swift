@@ -318,7 +318,7 @@ struct AccountSettingsView: View {
                 Button("Sign out") { confirmation = .signOut }
                 Button("Delete account", role: .destructive) { confirmation = .delete }
             } footer: {
-                Text("Account deletion removes the local prototype account. A production build would require fresh authentication and a server-side deletion period.")
+                Text("Deleting your account permanently removes your profile, conversations, connections, and private résumé records. This cannot be undone.")
             }
         }
         .ntScreenBackground()
@@ -329,7 +329,7 @@ struct AccountSettingsView: View {
             isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } })
         ) {
             if confirmation == .delete {
-                Button("Delete account", role: .destructive) { store.deleteMockAccount() }
+                Button("Delete account", role: .destructive) { store.deleteAccount() }
             } else {
                 Button("Sign out", role: .destructive) { store.signOut() }
             }
