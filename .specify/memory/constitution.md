@@ -209,10 +209,11 @@ leaked server key defeats every other control in this document.
 
 ### VII. Deterministic Tests and CI-Only Deploys
 
-- An iOS change is done only when the Xcode test scheme passes; a migration only when
-  `supabase db reset` and `supabase test db` pass locally; an Edge Function change only when
-  `deno check` and `deno test supabase/functions` pass. The PR description MUST record which
-  of these ran.
+- An iOS change is done only when the Xcode test scheme passes and the iOS workflow
+  (`.github/workflows/ios.yml`: unit tests on a simulator, then a Release compile) is green on
+  the pull request; a migration only when `supabase db reset` and `supabase test db` pass
+  locally; an Edge Function change only when `deno check` and `deno test supabase/functions`
+  pass. The PR description MUST record which of these ran.
 - Previews and unit tests MUST use deterministic mock data. Launch arguments that select the
   mock MUST be honoured only in DEBUG and MUST NOT reach the hosted backend. Fixtures MUST use
   fixed identifiers, injectable latency, and named failure triggers rather than randomness.
@@ -230,8 +231,9 @@ leaked server key defeats every other control in this document.
 - `README.md` and `docs/SUPABASE_BACKEND.md` MUST describe only shipped behaviour and MUST be
   updated in the same PR as the change they describe.
 
-Rationale: no CI job builds the iOS app and Supabase changes reach production automatically
-from `main`, so the listed commands and named tests are the only evidence that a change works.
+Rationale: the iOS workflow is the only build of the app outside a developer's machine and
+Supabase changes reach production automatically from `main`, so the listed commands, the
+workflow runs, and the named tests are the only evidence that a change works.
 
 ### VIII. Calm Technology
 
@@ -336,9 +338,11 @@ attention inside the app, alarms, or performs is working against that purpose.
   states for every new surface, the XCTest, pgTAP, and Deno tests it will add, any new scheduled
   job with its `network-to-` name, and the Calm Technology check. A plan that trusts the client for
   an authorization or membership decision MUST be sent back.
-- Pull request gate: tests land in the same PR as the behaviour they protect. Because no CI
-  builds the iOS app, a PR touching `NetworkTo/` or `NetworkToTests/` MUST record an Xcode
-  test pass before merge, and the reviewer MUST verify tokens and `NT` naming, canonical copy,
+- Pull request gate: tests land in the same PR as the behaviour they protect. A PR touching
+  `NetworkTo/`, `NetworkToTests/`, or the project file MUST have a green iOS workflow run
+  (unit tests and Release compile) on its head commit before merge, and a change the
+  workflow cannot exercise (a device-only behaviour such as push registration) MUST record
+  its manual check in the PR description. The reviewer MUST verify tokens and `NT` naming, canonical copy,
   the accessibility contract, `isLive` gating, and `Sendable` and `private(set)` discipline
   by reading the diff. For the backend the reviewer MUST confirm the validate job passed, new
   tables carry RLS with revoke-then-grant, new functions carry revoke-then-grant and an empty
@@ -382,6 +386,11 @@ kind and keep errors until dismissed); availability, preference, meetup, feedbac
 saves keep optimistic state after a failure (add the `NTOfflineState` matrix). Until those
 land, the SHOULD deviations they represent are recorded here rather than in each PR.
 
+1.3.0 (MINOR): `.github/workflows/ios.yml` now runs the unit tests and a Release compile for
+every pull request that touches the app, so Principle VII and the pull request gate require a
+green iOS workflow run instead of a manually recorded Xcode pass; device-only behaviour keeps
+a recorded manual check. No feature code changes.
+
 Versioning follows MAJOR.MINOR.PATCH:
 - MAJOR: a principle is removed or redefined, a refused surface is admitted, a privacy or
   trust boundary in Principles II, IV, or VI is loosened, or a gate becomes optional.
@@ -398,4 +407,4 @@ Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
 `docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
 same PR as any change that alters what they describe.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12
+**Version**: 1.3.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12

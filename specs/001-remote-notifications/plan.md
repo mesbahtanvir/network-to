@@ -89,7 +89,8 @@ Principles touched: I, II, III, IV, V, VI, VII, VIII.
   validate the token and environment, and are granted to `authenticated` only; the client
   cannot register for anyone else or see another member's registration. PASS.
 - **VII (deterministic tests, CI-only deploys)**: XCTest files listed below; nothing deploys.
-  Because no CI builds the app, the PR records the Xcode test pass before merge. PASS.
+  The iOS workflow runs the unit tests and a Release compile on the PR; the device-only checks
+  (permission dialog, APNs token, cold-launch tap) are recorded in quickstart.md. PASS.
 - **VIII (calm technology)**: see the Calm Technology check below. PASS.
 
 Gate details required by the plan gate:

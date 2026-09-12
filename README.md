@@ -50,6 +50,8 @@ Hosted Supabase migrations and Edge Functions are deployed only through the repo
 
 ## Verify
 
+The same unit tests and a Release compile run in GitHub Actions (`.github/workflows/ios.yml`) for every pull request that touches the app.
+
 ```sh
 xcodebuild \
   -project NetworkTo.xcodeproj \
