@@ -342,12 +342,13 @@ attention inside the app, alarms, or performs is working against that purpose.
   `NetworkTo/`, `NetworkToTests/`, or the project file MUST have a green iOS workflow run
   (unit tests and Release compile) on its head commit before merge, and a change the
   workflow cannot exercise (a device-only behaviour such as push registration) MUST record
-  its manual check in the PR description. The reviewer MUST verify tokens and `NT` naming, canonical copy,
-  the accessibility contract, `isLive` gating, and `Sendable` and `private(set)` discipline
-  by reading the diff. For the backend the reviewer MUST confirm the validate job passed, new
-  tables carry RLS with revoke-then-grant, new functions carry revoke-then-grant and an empty
-  `search_path`, retryable RPCs are idempotent, privilege assertions and cron assertions
-  exist, and no secret or URL appears in a migration or the iOS target.
+  its manual check in the PR description. The reviewer MUST verify tokens and `NT` naming,
+  canonical copy, the accessibility contract, `isLive` gating, and `Sendable` and
+  `private(set)` discipline by reading the diff. For the backend the reviewer MUST confirm
+  the validate job passed, new tables carry RLS with revoke-then-grant, new functions carry
+  revoke-then-grant and an empty `search_path`, retryable RPCs are idempotent, privilege
+  assertions and cron assertions exist, and no secret or URL appears in a migration or the
+  iOS target.
 - SHOULD deviations: a SHOULD rule may be departed from only when the PR description records
   the rule by principle numeral and the reason. An unrecorded deviation is a blocking finding.
 - Deploy gate: merges to `main` touching `supabase/**` deploy automatically: validate, then
