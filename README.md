@@ -16,6 +16,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - Notification management through native iPhone Settings
 - One account-scoped free month, followed by a native Apple monthly membership
 - No gender collection, gender filters, or gender-based ranking
+- Company marks beside every verified company name (introduction, conversations, Connections, profile), fetched once server-side from each company's own website and served only from the project's own storage, with a company monogram whenever no mark is available; a registry of 249 North American technology companies and employers
 - A production-hardened Supabase backend for Auth, Postgres, RLS, hourly matching, meetup follow-ups, retention, Realtime tables, APNs delivery, App Store Server Notifications, operations alerting, and Edge Functions
 - Transactional profile setup, retry-safe messaging, and a restart-safe cross-device magic-link flow
 - On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting of identity, role context, expertise, history, education, and demonstrated experience through a rate-limited Supabase Edge Function

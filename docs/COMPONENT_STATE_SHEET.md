@@ -34,6 +34,8 @@ This document defines the reusable SwiftUI-level components and states required 
 | `NTColor.success` | `#2E7350` | `#6BC18F` | Verified/mutual/complete |
 | `NTColor.warning` | `#8A641D` | `#E0B55C` | Expiry/attention |
 | `NTColor.destructive` | `#B42332` | `#FF7A88` | Safety/destructive action |
+| `NTColor.companyMarkBacking` | `#F3EEE6` | `#F3EEE6` | Tile behind company marks and monograms (fixed in both appearances) |
+| `NTColor.companyMarkGlyph` | `#354C3D` | `#354C3D` | Company monogram characters |
 
 Meaning is always paired with text or a symbol. Colour is never the only state indicator.
 
@@ -139,6 +141,7 @@ States:
 Anatomy:
 
 - `checkmark.seal.fill`;
+- `NTCompanyMark` (mark or company monogram) immediately before the company name;
 - company name or “Work email verified”;
 - disclosure action.
 
@@ -157,6 +160,27 @@ Accessibility:
 
 - VoiceOver reads the complete meaning, not only “verified.”
 - Seal is decorative when the adjacent text carries meaning.
+
+### `NTCompanyMark`
+
+Anatomy:
+
+- square tile the height of the accompanying text line, `NTColor.companyMarkBacking`, 25% continuous radius, one-eighth inner padding;
+- the company's published icon fitted inside, or the company monogram in `NTColor.companyMarkGlyph`.
+
+Placement: inline in the text it accompanies (`CompanyMarkTile.text` and `NTRoleAndCompanyLine`), immediately before the company name, so long names wrap as ordinary text at every Dynamic Type size and at 320 pt.
+
+States:
+
+- mark (a served mark this phone holds);
+- company monogram (no mark published, withheld, company not approved, affiliation not verified, not yet downloaded, offline, or failed).
+
+There is no loading, error, or retry state and no animation when a monogram becomes a mark. A mark is fetched only from the project's own storage host, cached in the Caches directory, and cleared at sign-out and after confirmed account deletion.
+
+Accessibility:
+
+- decorative (`accessibilityHidden`); the company name and existing verification wording carry the meaning;
+- monogram glyph on the tile 8.07:1; tile on the dark surface 14.02:1.
 
 ### `NTVisibilityLabel`
 
@@ -454,8 +478,10 @@ Anatomy:
 
 - back action;
 - name;
-- role and verified company;
+- role and verified company with `NTCompanyMark` before the company name (one line; the row and connection detail carry the full wrapping text);
 - conversation details/safety menu.
+
+Shipped as the principal toolbar item of `ConversationView`; the navigation title keeps the counterpart's name for the back button and VoiceOver reads name, role, and company once.
 
 ### `NTIntroductionContextStrip`
 

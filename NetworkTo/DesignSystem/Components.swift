@@ -16,13 +16,30 @@ struct NTMonogram: View {
 }
 
 struct NTVerifiedCompanyLine: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.displayScale) private var displayScale
     let company: String
+    var mark: CompanyMarkReference? = nil
 
     var body: some View {
-        Label("\(company) · Work email verified", systemImage: "checkmark.seal.fill")
-            .font(.caption.weight(.medium))
-            .foregroundStyle(NTColor.success)
-            .accessibilityLabel("\(company). Verified through access to a company email. This does not imply employer endorsement.")
+        Label {
+            CompanyMarkTile.text(
+                companyName: company,
+                reference: mark,
+                markData: store.companyMarkData(for: mark),
+                textStyle: .caption,
+                dynamicTypeSize: dynamicTypeSize,
+                displayScale: displayScale
+            )
+            + Text(" \(company) · Work email verified")
+        } icon: {
+            Image(systemName: "checkmark.seal.fill")
+        }
+        .font(.caption.weight(.medium))
+        .foregroundStyle(NTColor.success)
+        .accessibilityLabel("\(company). Verified through access to a company email. This does not imply employer endorsement.")
+        .task(id: mark) { await store.ensureCompanyMark(mark) }
     }
 }
 
@@ -60,7 +77,7 @@ struct NTProfessionalIdentity: View {
                 Text("\(profile.role) · \(profile.city)")
                     .font(.subheadline)
                     .foregroundStyle(NTColor.textSecondary)
-                NTVerifiedCompanyLine(company: profile.company)
+                NTVerifiedCompanyLine(company: profile.company, mark: profile.displayedCompanyMark)
             }
             Spacer(minLength: 0)
         }

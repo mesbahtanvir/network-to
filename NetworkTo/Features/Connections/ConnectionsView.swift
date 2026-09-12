@@ -113,10 +113,13 @@ struct ConnectionsView: View {
                     NTMonogram(initials: connection.person.initials, size: 54)
                     VStack(alignment: .leading, spacing: NTSpacing.xxs) {
                         Text(connection.person.name).font(.title3.weight(.semibold))
-                        Text("\(connection.person.role) at \(connection.person.company)")
-                            .font(.subheadline)
-                            .foregroundStyle(NTColor.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        NTRoleAndCompanyLine(
+                            role: connection.person.role,
+                            company: connection.person.company,
+                            mark: connection.person.displayedCompanyMark
+                        )
+                        .foregroundStyle(NTColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         NTStatusPill(text: "Met in person", symbol: "cup.and.saucer.fill", tint: NTColor.success)
                     }
                     .layoutPriority(1)

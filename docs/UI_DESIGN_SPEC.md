@@ -181,7 +181,7 @@ Returning members follow `Welcome → Sign in → Work email → Verify → Toda
 
 - Consumer email domains are rejected with a direct explanation.
 - Unknown company domains enter review; the UI must not pretend that validation is instant.
-- Public and private fields are visibly distinguished during setup.
+- Introduction-visible and private fields are visibly distinguished during setup.
 - Optional résumé extraction prefills only supported facts: identity, role scope, explicit current/latest-role focus, experience range, expertise, work history, education, and demonstrated experience. The PDF remains on-device and contact details are redacted before bounded text is processed.
 - The draft remains separate from the profile until confirmation. Every inferred item has a direct remove action, and the member can discard the draft entirely.
 - Résumé users skip factual screens that are already complete. Professional ambition remains required and member-authored; growth themes, immediate perspective, help format, and contribution boundaries can be confirmed or added with low-input controls.
@@ -242,9 +242,9 @@ This is the most important decision surface in V1. It is a full screen, not a ca
 8. Trust/privacy clarification where needed.
 9. **Pass** and **Interested** actions.
 
-### Proposed photography policy
+### Photography policy
 
-Do not show a profile photo on the introduction decision screen in V1. Use a restrained name monogram or verified-company mark. This keeps professional substance dominant and materially reduces dating-style visual judgment.
+Adopted 2026-09-11 (`docs/PRODUCT_DEFINITION.md`, `docs/DESIGN_PHILOSOPHY.md`): no profile photo appears before mutual interest. The introduction decision screen uses the name monogram for the person and the company mark for the verified company. This keeps professional substance dominant and materially reduces dating-style visual judgment.
 
 After mutual interest, an optional small profile photo may appear in chat and connection detail if product testing shows that it improves meeting trust. This remains a design decision to validate.
 
@@ -344,6 +344,8 @@ The interface should feel like being thoughtfully introduced by someone who know
 | `success` | `#2E7350` | `#6BC18F` | Mutual interest and confirmed states |
 | `warning` | `#8A641D` | `#E0B55C` | Expiry or work-email attention |
 | `destructive` | `#B42332` | `#FF7A88` | Safety and account actions |
+| `company-mark-backing` | `#F3EEE6` | `#F3EEE6` | Opaque tile behind every company mark and company monogram, the same in both appearances |
+| `company-mark-glyph` | `#354C3D` | `#354C3D` | Company monogram characters on the mark tile |
 
 Botanical green carries primary action and quiet trust. Clay appears around coffee, introductions, and moments of human momentum. Verification stays visually secondary: trust should be present, not the personality of the product.
 
@@ -414,7 +416,11 @@ Avoid sparkles as a generic AI signifier and never use hearts for interest.
 
 ### Verified company line
 
-Role, company name, and a verification seal with accessible text: **Work email verified**. A disclosure explains exactly what verification means.
+Verification seal, then the company mark (or company monogram) immediately before the company name, then **Work email verified**. A disclosure explains exactly what verification means. The mark and monogram are decorative; the company name stays the accessible text.
+
+### Company mark
+
+A square tile the height of the text line it sits in, drawn on `company-mark-backing` with one-eighth inner padding and a 25% continuous corner radius, holding the company's own published icon fitted without distortion or recolouring. When no mark is available (none published, withheld, not approved, not yet downloaded, offline, or failed) the same tile shows the company monogram in `company-mark-glyph`: at most two uppercase characters from the first letter or digit of the first two words of the company name, skipping punctuation-only words and "and", "of", "the". A mark replaces a monogram on the next redraw with no animation. Marks appear beside the verified company name on the introduction and mutual-interest identity rows, in conversation rows and the conversation header, in connection rows and detail, and on the member's own profile identity row; never in onboarding, the Edit profile Company field, the "Work email verified" settings row, or beside typed experience history.
 
 ### Professional topic label
 
@@ -447,7 +453,7 @@ A finite confirmation state that explains mutual gating and avoids status checki
 
 ### Professional identity row
 
-Name, role, verified company, and last relevant context. Use in Messages and Connections; do not add follower counts or public activity.
+Name, role, verified company with its company mark, and last relevant context. Use in Messages and Connections; do not add follower counts or public activity.
 
 ### Conversation context strip
 
@@ -465,17 +471,24 @@ One truthful explanation and, when useful, one action. Today must be comfortable
 
 ### Required terminology
 
+This is the single canonical vocabulary; the constitution and the product definition refer to it.
+
 Use:
 
 - Introduction
 - Interested
+- Pass
+- Mutual interest
+- Conversation
 - Connection
 - Meet
-- Professional interests
+- Member (never user)
+- Professional topic
 - Available today
 - Why you should meet
 - Why they may want to meet you
 - Verified company / Work email verified
+- Company mark and company monogram
 
 Avoid:
 
@@ -511,7 +524,7 @@ Avoid:
 
 ## 13. Privacy, trust, and safety UI
 
-- Public, introduction-only, and private fields are labeled wherever the distinction matters.
+- Introduction, coarse-only, only-you, and private fields are labeled wherever the distinction matters.
 - Gender is not requested, stored, exposed, or used to determine introduction eligibility or ranking.
 - The product does not offer gender-based introduction pools; safety controls apply consistently to every member.
 - Introduction responses are inaccessible to the other member until mutuality is established.
@@ -550,7 +563,7 @@ The product direction is fixed by the PRD. The UI becomes **Locked 1.0** when th
 | Available Today | Broad area + time window + automatic expiry | PRD locked |
 | Visual character | Warm clarity; human intention; quiet trust; native iOS | Revised in all prototypes; awaiting approval |
 | Colour system | Warm paper, botanical green, restrained clay meeting accent | Revised in all prototypes; awaiting approval |
-| Introduction photography | No photo before mutual interest | Proposed |
+| Introduction photography | No photo before mutual interest | Adopted 2026-09-11 (PRODUCT_DEFINITION.md) |
 | Introduction hierarchy | Identity → reciprocal value → practical overlap → actions | Proposed |
 | Today state designs | Section 8 | Proposed |
 | Screen inventory | Section 5 | Proposed |
@@ -579,8 +592,7 @@ The product direction is fixed by the PRD. The UI becomes **Locked 1.0** when th
 
 ### Remaining product-owner design decisions
 
-1. Approve or reject the proposed no-photo introduction screen.
-2. Approve or redirect the revised warm-paper, botanical-green, and clay visual execution.
-3. Choose the final product name and logotype treatment if `network.to` is a repository name rather than the customer-facing brand.
+1. Approve or redirect the revised warm-paper, botanical-green, and clay visual execution.
+2. Choose the final product name and logotype treatment if `network.to` is a repository name rather than the customer-facing brand.
 
 Language rule: use **meet** for the general relationship outcome and **coffee** when describing the concrete in-person format, availability, or plan.

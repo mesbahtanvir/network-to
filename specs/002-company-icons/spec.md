@@ -1,131 +1,242 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: Verified Company Marks
 
-**Feature Branch**: `[###-feature-name]`
+**Feature Branch**: `002-company-icons`
 
-**Created**: [DATE]
+**Created**: 2026-09-11
 
 **Status**: Draft
 
-**Input**: User description: "$ARGUMENTS"
+**Input**: User description: "Company marks: show each verified company's icon (its company mark) wherever a member's verified company appears: the introduction screen, the conversation list and header, the connections list and detail, and the member's own profile, so a member recognises a company at a glance. Cover most well-known North American technology companies and technology employers by expanding the verified company registry, so members from those companies can join and see their company mark. When no icon exists or it cannot load, show a calm monogram of the company name so nothing looks broken. A member's phone must never contact any third-party service to display a mark: marks are served by the product's own backend, which fetches and caches each company's publicly published icon once, server-side, through an operations action the product team can run without an app release. Marks are decorative for assistive technology; the company name stays the accessible text. Marks must look consistent in light and dark appearance and at every text size."
+
+## Clarifications
+
+### Session 2026-09-11
+
+- Q: Should the backing behind every mark and company monogram be the same light neutral colour in both light and dark appearance, or should it follow the appearance (a dark tile in dark appearance)? → A: A fixed opaque light neutral backing in both appearances; most companies publish icons drawn for light backgrounds, and the input asks for marks that look consistent in both appearances (FR-006, SC-006, Assumptions "Backing appearance").
+- Q: Are the coverage thresholds for the registry expansion right: (a) technology-business constituents of the Nasdaq-100, S&P 500, and S&P/TSX Composite, (b) private North American technology companies with at least 1,000 employees, (c) technology employers with at least 200 engineering staff in Toronto, targeting at least 200 companies? → A: Adopt clauses (a), (b), and (c) as written with the 200-company target; each company is recorded with the clause that admitted it (FR-017, SC-003, Assumptions "Coverage definition").
+- Q: Are the mark file limits right: at least 128 pixels on the shorter side, at most 1 MB, keeping the largest published icon that fits? → A: Yes; the minimum keeps a caption-height mark sharp at the largest accessibility text size on the sharpest supported screen, and 1 MB admits the largest icons companies publish (FR-025, FR-007, Assumptions "Mark file limits").
+- Q: How is a company from today's launch registry recorded when it meets none of clauses (a), (b), or (c)? → A: It is kept and recorded with the coverage clause "launch" (carried over from the initial registry); no company added after this feature may use that clause (FR-018, SC-003, Assumptions "Coverage definition" and "Registry shape").
 
 ## User Scenarios & Testing *(mandatory)*
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+### User Story 1 - Recognise the company on the introduction screen and in conversations (Priority: P1)
 
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+A member opens their one introduction, or the list of conversations, or a conversation with someone they are arranging coffee with. Beside the counterpart's verified company name they see the company's mark, a small quiet image, so they recognise the company at a glance without reading. When the company has no mark, or the mark has not arrived yet (for example the phone is offline), they see a calm company monogram in the same spot instead. Nothing looks missing or broken, and the wording "Work email verified" and its disclosure stay exactly as they are today.
 
-### User Story 1 - [Brief Title] (Priority: P1)
+**Why this priority**: the introduction screen is the product's decision moment and conversations are where two people arrange to meet. These are the two surfaces where recognising a company quickly helps most, and the constitution already names a "verified-company mark" as the accepted way to identify someone there before mutual interest. The company monogram fallback is what makes the feature safe to ship on its own.
 
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Independent Test**: can be fully tested with marks for two or three test companies placed with the product backend by hand (the operations action in Story 4 is not needed), by presenting a member with an introduction whose counterpart works at a company with a mark, one whose company has no mark, and one where the phone is offline, then opening the conversation list and a conversation for each, while the phone's network traffic is observed. This slice includes serving marks from the product backend, keeping a local copy on the phone, and the company monogram fallback, so it delivers the recognisable-company outcome on the two most important surfaces without depending on the other stories.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a member has an introduction whose counterpart's verified company has a mark and the phone is online, **When** the member opens the introduction screen, **Then** beside the company name in the verified company line the member sees the company mark if this phone already holds a copy, otherwise the company monogram, which is replaced by the mark in place once the copy arrives during the same session; at no moment is the spot blank, and the reciprocal-value text, Pass, and Interested are unchanged.
+2. **Given** the counterpart's verified company has no mark, **When** the member opens the introduction screen, **Then** the company monogram (for example "TR" for Thomson Reuters) appears in the same place at the same size, with no blank space, spinner, or broken-image placeholder.
+3. **Given** the member's phone is offline and the mark has never been shown on this phone, **When** the member opens the introduction screen, **Then** the company monogram is shown; **When** the phone regains connectivity and the member brings the app back to the foreground, **Then** the mark replaces the company monogram in place without any text moving.
+4. **Given** a member has several conversations, **When** they open the conversation list, **Then** each row shows the counterpart's company mark or company monogram immediately before the company name in the row's role-and-company line, and no row waits for a mark before showing its text.
+5. **Given** a member opens a conversation, **When** the header appears, **Then** it shows the counterpart's name, role, and verified company (the same role-and-company line the conversation list row already shows, added to the header by this feature), with the company mark or company monogram immediately before the company name, no other detail about the counterpart, and the safety menu and the context strip explaining the introduction unchanged.
+6. **Given** a member uses a screen reader, **When** they move through an identity row on any of these surfaces, **Then** they hear exactly what that row announces today (the counterpart's name, role, and company name, plus the verification wording "Verified through access to a company email. This does not imply employer endorsement." where that surface shows it today), each once, and the mark or company monogram announces nothing.
+7. **Given** the member uses dark appearance and the largest accessibility text size on the narrowest supported phone width, **When** they view any of these surfaces, **Then** the company monogram characters are fully visible, the mark is not clipped, the mark or monogram is the height of the text line it sits in, the company name wraps rather than the verification wording truncating, and nothing overlaps.
+8. **Given** a member has already responded Interested and the introduction has reached the mutual-interest state, **When** the counterpart's identity is shown there, **Then** the same mark or company monogram appears, and nothing about the mark differs by either member's response.
+9. **Given** a member visits every surface that shows a mark while their phone's network traffic is observed, **When** the observation ends, **Then** every connection made to display marks went to the product backend and none to any other party.
+10. **Given** a member whose screens show three companies (their own, their introduction counterpart's, and one connection's), **When** the phone's traffic to the product backend is observed through a full session, **Then** marks are requested or received only for those three companies, and no screen, search, or list of companies exists anywhere in the app.
+11. **Given** a member has seen a mark once on this phone, **When** the phone goes offline and the member reopens that surface, **Then** the mark is still shown; **When** the member signs out, or deletes their account and the product backend confirms, **Then** the phone holds no copy of any mark, and a later sign-in shows company monograms until marks are fetched again.
 
 ---
 
-### User Story 2 - [Brief Title] (Priority: P2)
+### User Story 2 - Members from well-known technology companies can join and see their mark (Priority: P2)
 
-[Describe this user journey in plain language]
+A newcomer builder in a North American city has a work email at a well-known technology company or technology employer that is not in today's registry of about forty companies. They enter their work email, the product recognises the company, they complete sign-up, and their company's mark appears beside their verified company on their own profile and, later, beside their name on the counterpart's screens.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: the product's audience is technology employees, and verification means control of a company email at a listed company. Every well-known technology employer missing from the registry is a group of members who cannot join at all. Coverage is what makes the marks meaningful across the network rather than for a handful of companies.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: can be fully tested before any mark exists, by checking the eligibility of a work email domain from a sample of companies admitted under each coverage clause in Assumptions (public technology companies, large private technology companies, and technology employers with a substantial engineering presence in the launch city), confirming each answers eligible and completes sign-up, and confirming a consumer email address is still refused. Delivers joinability for those members on its own, since the company monogram covers a company with no mark.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** the expanded registry, **When** a person enters a work email at any company on the coverage list, **Then** the email is recognised as eligible and sign-up proceeds exactly as it does today for currently listed companies.
+2. **Given** the expanded registry, **When** a person enters a consumer email address, **Then** it is refused with today's wording ("Use a qualifying company email. Consumer email addresses are not eligible for V1.").
+3. **Given** the expanded registry, **When** a person enters a work email at a company that is not listed, **Then** it enters review with today's pending wording, and nothing about marks or monograms appears until the company is approved.
+4. **Given** a company on the coverage list uses several email domains (for example a corporate domain and a regional or subsidiary domain), **When** members join from any of them, **Then** each is shown the same company name, and therefore the same mark or company monogram.
+5. **Given** a newly listed company has no mark yet, **When** one of its members views their own profile, **Then** they see the company monogram and the usual "Work email verified" wording, with nothing indicating that something is missing.
 
 ---
 
-### User Story 3 - [Brief Title] (Priority: P3)
+### User Story 3 - Recognise companies in Connections and on the member's own profile (Priority: P3)
 
-[Describe this user journey in plain language]
+A member opens Connections to see the people they have actually met, or opens a connection's detail to reread their professional context. Beside each verified company name is the company mark or company monogram. On their own profile, the member sees their own company's mark beside their verified company in the identity row, so the profile they present looks the way it will look to a counterpart. The separate "Work email verified" settings row keeps its seal symbol and does not gain a second mark.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: Connections and Profile are reference surfaces rather than decision or coordination surfaces. They complete the promise that the mark appears wherever a verified company appears, but a member gains less from recognition there than on the introduction screen or in a conversation.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: can be fully tested by viewing a Connections list containing people from companies with and without marks, opening a connection's detail, and viewing the member's own profile in the verified and reverification-required states. Delivers consistent identity presentation across the remaining surfaces.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a member has connections at companies with marks and at companies without, **When** they open Connections, **Then** each row shows the mark or company monogram immediately before the verified company name, and the rows carry no other new metadata.
+2. **Given** a member opens a connection's detail, **When** the identity row appears, **Then** the mark or company monogram appears beside the verified company name, and the safety actions and introduction origin are unchanged.
+3. **Given** a member opens their own profile, **When** the identity row appears, **Then** it shows the member's own company mark or company monogram beside the company name, the verification disclosure wording is unchanged, and the "Work email verified" settings row keeps its seal symbol and gains no second mark.
+4. **Given** a member's profile lists earlier roles at other companies they typed themselves, **When** they view the experience list, **Then** no mark or company monogram appears beside those companies, because only the verified company carries a mark.
+5. **Given** a member's own affiliation is pending review, needs reverification, or has changed, **When** they open their profile, **Then** the identity row shows the company monogram of the displayed company name with the existing wording for that state and no mark; **When** the affiliation is verified again, **Then** the mark returns at the next refresh.
 
 ---
 
-[Add more user stories as needed, each with an assigned priority]
+### User Story 4 - The product team populates and refreshes marks without an app release (Priority: P4)
+
+A member of the product team approves new companies or learns that a company has rebranded. Without shipping an app update, they run one operations action that fetches each approved company's publicly published icon once, stores it with the product backend, and records what happened for every company. Members' phones pick up new or refreshed marks on their next ordinary refresh, and the product team can see for every company whether it has a mark and, if not, why.
+
+**Why this priority**: this is how the marks get there and stay correct. It sits last only because Stories 1 through 3 can be verified with a small set of marks the product team places with the product backend by hand; it is not optional for launch.
+
+**Independent Test**: can be fully tested by approving a company with no mark, running the operations action, confirming a mark is stored and its outcome recorded, confirming a phone that has not been updated shows the new mark at its next refresh, and confirming the product team's view lists a status for every approved company.
+
+**Acceptance Scenarios**:
+
+1. **Given** an approved company with no mark, **When** the product team runs the operations action, **Then** the product backend fetches the company's publicly published icon once, stores it, records the outcome "fetched" with the time, and members' phones show the mark after their next refresh with no app update.
+2. **Given** an approved company that publishes no icon, or whose largest published icon is smaller than the minimum in FR-025, **When** the action runs, **Then** the outcome "no icon published" is recorded for that company, the company monogram continues to be shown, and the action completes for the remaining companies.
+3. **Given** a fetch fails for one company (unreachable, too large, too small, or the wrong kind of file), **When** the action runs, **Then** the failure and its reason are recorded, no other company is affected, the run never blocks or alarms members, and re-running later retries only what is missing or requested.
+4. **Given** a company rebrands, **When** the product team requests a refresh of that company's mark, **Then** the new mark is stored as a new version, phones that still hold the old mark replace it on their next refresh with no member action, and the company name already shown for existing members does not change.
+5. **Given** a fetched icon is judged unsuitable (very low contrast, off-brand, or unrecognisable at small size), **When** the product team withholds it, **Then** members see the company monogram and the stored file is not served.
+6. **Given** a company is removed from the approved registry, **When** members verified through it next refresh, **Then** the company monogram is shown in place of its mark, their company name text remains, and their conversations and connections are unaffected.
+7. **Given** the action is run twice in a row with no changes in between, **When** the second run completes, **Then** no mark is fetched again, every existing mark and version is unchanged, and the run records that nothing needed doing.
+8. **Given** a run is in progress, **When** a second run is started, **Then** the second run records "skipped, run in progress", fetches nothing, and the first run completes unaffected.
+9. **Given** the operations action has run, **When** the product team asks which approved companies lack a mark, **Then** they receive a complete list with the recorded reason for each (not yet fetched, no icon published, fetch failed with its reason, or withheld).
+10. **Given** a member has viewed marks on every surface, **When** the product team inspects every operations view and record the product backend keeps, **Then** no record names that member together with any company mark or with the counterpart viewed.
+11. **Given** an operations run record older than 180 days and the stored file of a mark version that is no longer served older than 30 days, **When** the product's regular retention schedule runs, **Then** both are gone, newer records and files remain, and current marks are unaffected.
+
+---
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- What happens when a company has never published an icon? The operations action records "no icon published" for it, the company monogram is shown everywhere, and the product team can see the company in the list of companies without a mark.
+- What happens when a mark fails to load on the phone, or the phone is offline and has no cached copy? The company monogram is shown in the same footprint; the mark replaces it in place on the next successful refresh; text never moves and no error is shown, because a missing decoration is not an error the member can act on.
+- What happens when a company name starts with or contains punctuation or a joining word? Those words are skipped (FR-004), so the company monogram is always one or two letters or digits: "PG" for Procter & Gamble, "TD" for The Trade Desk.
+- What happens when two companies share a monogram? Meta and Microsoft both show "M". This is acceptable because the company name is always shown beside it; a company monogram never identifies a company on its own.
+- What happens with a very long company name? The company monogram uses at most two characters, so its size never depends on the name's length; the company name text wraps to further lines at large text sizes rather than truncating the verification wording.
+- What happens when a company is rebranded or renamed? The product team requests a refresh; the new mark version reaches every affected member at their next refresh; the company name already shown for existing members does not change (see Scope Boundaries); a member sees no notice and nothing to do.
+- What happens when one company has several email domains or several consumer brands? All email domains of one registry entry share one name and one mark; a brand that members identify with and that has its own work email domain may be its own registry entry with its own mark. A member can never tell from the mark or name which of a company's domains a counterpart's email uses.
+- What happens when the member's own affiliation is pending review, needs reverification, or has changed? The company monogram of the displayed company name is shown with the existing wording for that state; the mark returns once the affiliation is verified again.
+- What happens with a low-contrast, transparent, or non-square icon in light or dark appearance? Every mark is drawn inside the same light neutral backing in both appearances, with inner padding, fitted without distortion or cropping; the backing, not the icon, keeps icons drawn for light backgrounds visible in dark appearance. An icon that is still unrecognisable on that backing is withheld so the company monogram shows.
+- What happens when a mark is refreshed while a phone still shows the cached one? The phone keeps showing the cached mark until its next refresh, then replaces it with the new version in place; two members may see different versions until each phone's next refresh, and that is acceptable.
+- What happens when a company is removed from the registry? Its mark is withdrawn and the company monogram is shown; existing members keep their company name, access, conversations, and connections; the stored file is deleted on the product's retention schedule.
+- What happens for members whose company has no mark yet after the registry expansion? They see the company monogram everywhere and nothing suggests a fault; they cannot upload a mark themselves.
+- What happens when the operations action is run while members are using the app? Members are never blocked or slowed; a mark changes for them only at their next refresh.
+- What happens when the action is started while a run is already in progress? The second run records "skipped, run in progress" and does nothing.
+- What happens when a run stops midway? Companies already processed keep their recorded outcome; the rest remain "not yet fetched" and are picked up by the next run.
+- What happens when a company's website sends the icon request on to another address? The action follows wherever the company's own website directs it for the icon and nowhere else; it never uses an icon aggregation, lookup, or brand-asset service. If the icon cannot be reached that way, the outcome is "fetch failed (unreachable)".
+- What happens when a member reduces motion or transparency, or enables increased contrast? Marks never animate and a mark replacing a company monogram has no animation with or without Reduce Motion; the backing is an opaque product surface; monogram characters keep their contrast with Increased Contrast on; state and meaning never depend on the mark.
+- What happens when a member signs out or deletes their account? Cached marks are cleared with the rest of the phone's local state, after the product backend confirms in the case of deletion.
 
 ## Requirements *(mandatory)*
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+**Display**
 
-*Example of marking unclear requirements:*
+- **FR-001**: The product MUST show a company mark beside the verified company name on the introduction screen and on any later introduction state that already shows the counterpart's identity (today, the mutual-interest state), in each conversation list row, in the conversation header (which gains the counterpart's role and verified company line for this purpose), in each connections list row, in connection detail, and in the member's own profile identity row. On every surface the mark or company monogram sits immediately before the company name, on the same line, separated from it by the product's smallest gap, and its height equals the line height of the text the company name is set in: the caption-sized verified company line on the introduction, mutual-interest, connection detail, and profile identity rows (where the existing seal symbol keeps its place at the start of the line), and the role-and-company line in conversation rows, connection rows, and the conversation header. A company's mark appears once per screen.
+- **FR-002**: The mark MUST accompany the company name text; the company name MUST always remain visible, and a mark MUST never be the sole way any information is conveyed.
+- **FR-003**: When a company has no mark, its mark is withheld, the company is not currently approved (FR-028), or the mark cannot be shown on the phone (not yet downloaded, offline, or failed), the product MUST show the company monogram in the same footprint, using the product's standard colours, spacing, and type, and MUST NOT show a blank space, a loading indicator, or a broken-image placeholder.
+- **FR-004**: The company monogram MUST use at most two characters, shown in uppercase, taken from the first letter or digit of the first two words of the company name. Words are separated by spaces; hyphens and punctuation do not start a new word. Words containing no letter or digit (such as "&") and the joining words "and", "of", and "the" are skipped unless they are the only word (for example "TR" for Thomson Reuters, "S" for Shopify, "1" for 1Password, "PG" for Procter & Gamble, "TD" for The Trade Desk).
+- **FR-005**: When a mark becomes available after a company monogram has been shown, the mark MUST replace the monogram on the next redraw with no animation of any kind (no fade, scale, or slide), so behaviour is identical with and without Reduce Motion, and no surrounding text moves.
+- **FR-006**: Every mark and company monogram MUST be drawn inside the same backing on every surface: the same shape, the same backing colour, and inner padding of one-eighth of the backing's side on each edge. The backing MUST be the same opaque light neutral colour from the product's standard palette in both light and dark appearance, so that icons drawn for light backgrounds stay visible in dark appearance; in dark appearance it MUST contrast with the surrounding surface at 3:1 or better, and monogram characters MUST contrast with the backing at 4.5:1 or better in both appearances and with Increased Contrast on. The icon MUST be fitted inside the padding without distortion, cropping, rotation, or recolouring; an icon still unrecognisable on that backing is withheld (FR-026).
+- **FR-007**: Marks and company monograms MUST scale with the member's chosen text size: the mark's height MUST equal the line height of the text it accompanies at every text size, including the largest accessibility sizes; it MUST NOT be clipped at any size or at the narrowest supported phone width (320 points), with the company name wrapping rather than the verification wording truncating; and it MUST NOT appear blurred or pixelated at the largest accessibility size on the sharpest supported screen, which the minimum source size in FR-025 guarantees. A company whose largest published icon is smaller than that minimum receives the outcome "no icon published" and shows the company monogram.
+- **FR-008**: Marks and company monograms MUST be decorative for assistive technology: they MUST NOT be announced and MUST add nothing to what a row announces today. The company name MUST remain accessible text on every surface in FR-001, and wherever a surface shows the verification wording today ("Verified through access to a company email. This does not imply employer endorsement.") that wording MUST continue to be read exactly once per identity row; this feature adds no spoken text.
+- **FR-009**: Marks MUST NOT pulse, bounce, loop, or animate to attract attention, and the feature MUST add no notification, badge, sound, or prompt.
+- **FR-010**: Member-facing and operations wording MUST use the canonical vocabulary ("company mark", "company monogram", "Verified company", "Work email verified", "member") and MUST NOT introduce "logo badge", "brand badge", or any endorsement language.
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+**Serving and privacy**
+
+- **FR-011**: Every mark shown on a member's phone MUST be served by the product backend; the phone MUST NOT request a mark, or anything needed to display one, from any third party.
+- **FR-012**: The mark reference MUST travel with the company name in the screens that show it today; the product MUST NOT add any surface, request, or response that lists, browses, or searches companies or members, and the registry MUST NOT be exposed to members as a list.
+- **FR-013**: A mark MUST be identified by the company, never by an email domain; all email domains of one company MUST share one mark, so a member cannot learn a counterpart's email domain from what is shown.
+- **FR-014**: The product backend MUST keep no product record of which member requested or viewed which company mark, MUST offer the product team no view that lists members against marks, and MUST serve a mark without recording the member's current introduction or conversation alongside it. Any transient infrastructure request log that could imply a view MUST follow the existing short retention, MUST NOT be used for any product purpose, and MUST NOT be exposed as a member-to-mark listing. Serving a mark MUST NOT reveal to any other member or outside party which counterpart a member is viewing.
+- **FR-015**: Each mark MUST carry a version; a refreshed mark MUST be treated by phones as new content at their next refresh, replacing any cached copy.
+- **FR-016**: The phone MUST keep a local copy of marks it has shown so repeat views need no network and offline views still show the mark; local copies MUST be cleared with the rest of local state at sign-out and after account deletion is confirmed by the product backend.
+
+**Registry**
+
+- **FR-017**: The verified company registry MUST be expanded to cover well-known North American technology companies and technology employers as defined by the coverage clauses in Assumptions, recorded as a reviewed product decision approved by the product owner.
+- **FR-018**: Each approved company record MUST hold a display name, an industry, one or more work email domains, an optional public website address, the coverage clause that admitted it (a, b, or c, or "launch" for a company carried over from the initial registry), an approval status, and a mark status of exactly one of: available, no icon published, fetch failed, withheld, or not yet fetched.
+- **FR-019**: Sign-up eligibility rules MUST be unchanged: only approved work email domains are eligible, consumer email addresses remain refused, and review-pending wording remains as today.
+- **FR-020**: Requesting a refresh of a company's mark (for example after a rebrand) MUST store the fetched icon as a new version that replaces any cached copy on members' phones at their next refresh, with no member action; changing the company name already shown for existing members is out of scope for this feature.
+- **FR-021**: Removing a company from the approved registry MUST withdraw its mark so the company monogram is shown, and MUST NOT change existing members' company name text, access, conversations, or connections.
+
+**Operations**
+
+- **FR-022**: The product team MUST be able to run an operations action, without an app release, that for every approved company (or a named subset) fetches the company's publicly published icon once from the public website at the company's primary work email domain, or from the website address recorded on the company's registry entry when it differs, stores it with the product backend, and records an outcome for each company: fetched, no icon published, fetch failed with a reason, or skipped because a mark already exists.
+- **FR-023**: The operations action MUST be safe to re-run: it MUST keep existing marks unless a refresh is requested for that company, MUST record failures rather than stop, and MUST never block, slow, or notify members. If the action is started while a run is already in progress, the second start MUST do nothing and MUST record that it was skipped because a run was in progress.
+- **FR-024**: The operations action MUST run entirely on the product backend and MUST send no member data anywhere. It MUST fetch each icon only from the company's own public website or wherever that website itself directs it for the icon, and MUST NOT use any icon aggregation, lookup, or brand-asset service.
+- **FR-025**: The product backend MUST accept as a mark only a still picture file of an ordinary kind that phones and web browsers display natively (for example PNG or JPEG, including the small icon files websites publish), with no animation, video, vector, or script content, that is at most 1 MB and at least 128 pixels on its shorter side. When a company publishes several icons, the action MUST keep the largest one that meets these limits; if none does, the outcome is "no icon published". Anything else MUST be recorded as a failed fetch with the reason (too large, too small, wrong kind of file, unreachable).
+- **FR-026**: The product team MUST be able to withhold a company's mark, request a refresh of a single company's mark, and see for the whole registry which companies have a mark, which do not and why, the mark version, and when each was last fetched.
+- **FR-027**: Records of operations runs MUST be purged after 180 days, and the stored file of any mark version that is no longer served (withdrawn, withheld, or superseded by a newer version) MUST be deleted within 30 days, both on the product's regular retention schedule.
+- **FR-028**: A mark MUST be shown only when the member's affiliation is verified and the company is currently approved in the registry. In the pending-review, reverification-required, unverified or ineligible, and company-changed states, the surface MUST show what it shows today, with the company monogram of the displayed company name in place of any mark and the existing wording for that state unchanged.
 
 ### Key Entities *(include if feature involves data)*
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+- **Verified company**: an entry in the company registry. Display name, industry, approval status, one or more work email domains, optional public website address, the coverage clause that admitted it (a, b, c, or launch), mark status, current mark version, last fetch time. One verified company may have many members and many email domains; all of them share one mark.
+- **Company mark**: the image shown for one verified company. Belongs to exactly one company; has a version, a fetch time, a source (the company's publicly published icon and where it was fetched from), and a review state (available or withheld). Only the current version is served; earlier versions are deleted on the retention schedule. Never tied to a member or an email domain.
+- **Company monogram**: the derived fallback for a company with no shown mark; computed from the company name by the rule in FR-004 and never stored. Distinct from the person's initials monogram that identifies a person.
+- **Mark operations run**: one execution of the operations action. Records who on the product team ran it, when, its scope (all companies or a named subset), whether it was skipped because a run was in progress, and a per-company outcome. Operational data, retained 180 days.
+- **Cached mark**: the phone's local copy of a mark, keyed by company and version; replaced when the version changes and cleared with local state.
 
 ## Success Criteria *(mandatory)*
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: On every surface named in FR-001, in each of the following states, 100% of verified company names are accompanied by a mark or a company monogram and zero blank spaces, spinners, or broken-image placeholders appear: Introduction (undecided, submitting response, offline retry, expired); Mutual interest (opening chat, conversation active); Messages (populated, unread, offline); Connections (populated, offline); Profile (complete, incomplete, affiliation needs reverification); and, for each, the first view on a phone that has never fetched the mark.
+- **SC-002**: After the first run of the operations action over the expanded registry, 100% of approved companies have a recorded outcome, the share with an available mark is reported to the product owner against a working target of 90%, and every company without one shows the company monogram and is listed with its reason; a launch does not wait on that share.
+- **SC-003**: The approved registry lists at least 200 distinct companies, each recorded with the coverage clause (a, b, or c, or "launch" for a company carried over from the initial registry) that admitted it, no company added by this feature recorded as "launch", and an eligibility check of each company's primary work email domain answers eligible, while a consumer email domain still answers ineligible.
+- **SC-004**: A newly fetched or refreshed mark is visible on a member's phone, with no app update, on the first refresh (as defined in Assumptions) that completes after the operations action has recorded the outcome for that company; in a test with ten phones holding the old mark or no mark, 10 of 10 show the new mark at their next app open after the action.
+- **SC-005**: A network observation of a member's phone while visiting every surface in FR-001 shows zero connections to any party other than the product backend for the purpose of displaying marks.
+- **SC-006**: In an accessibility review of every surface in FR-001, in light and dark appearance, at the smallest and largest text sizes, and at 320 points compact width, 100% of marks and company monograms are unclipped and the height of their text line; monogram characters measure at least 4.5:1 against the backing in both appearances and with Increased Contrast on; the backing measures at least 3:1 against its surroundings in dark appearance; and a screen reader announces the company name once per identity row, the verification wording once wherever it is shown today, and nothing for the mark.
+- **SC-007**: When a mark arrives after its company monogram was shown, the surrounding text and controls do not move at all on the introduction screen or in conversation rows.
+- **SC-008**: The product team can populate or refresh marks for the entire registry with one action that completes within 30 minutes and records an outcome for every company, and can add a company and see its mark on a phone without any app release.
+- **SC-009**: In a moderated review with at least five members, each participant is shown the introduction screen for ten companies from the registry with the company name hidden, for two seconds each; participants name at least 8 of the 10 companies correctly from the mark alone, and when asked afterwards no participant describes the mark as distracting or as an endorsement of the person.
 
 ## Assumptions
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right assumptions based on reasonable defaults
-  chosen when the feature description did not specify certain details.
--->
+- **What a member can see about a counterpart today**: name, role, company name, city, topics, and professional context, but not the counterpart's email address or email domain. This feature adds only a company mark reference and changes nothing else about what is shared. The conversation header gains the role and verified company line that the conversation list row already shows; this is not new information.
+- **Conversation header**: today the conversation screen shows only the counterpart's name in its title. The product's design guidance already calls for name, role, and verified company there, and adding that line, with the mark or company monogram, is in scope of this feature so the mark has a place to sit; nothing else in the header changes.
+- **Private waiting state**: it shows no counterpart identity today and this feature does not add one; the mark appears on the mutual-interest state, which already shows the identity.
+- **Placement and size**: the mark or company monogram sits immediately before the company name, on the same line, the height of that text line, small and peripheral (FR-001); larger hero-style marks are deliberately not used. The person's initials monogram that identifies the person is unchanged. The constitution allows either a monogram or a verified-company mark on the decision screen; both are used, each for what it identifies.
+- **One mark per screen**: a company's mark appears once per surface, beside the identity that carries it; the "Work email verified" settings row keeps its seal symbol and gains no mark.
+- **Own affiliation states**: while a member's own affiliation is pending review, needs reverification, or has changed, the identity row shows the company monogram of the displayed company name with the existing wording for that state (FR-028). The monogram, not an empty space, is used because the same-footprint rule is what keeps nothing looking broken, and a monogram derived from the displayed name asserts nothing the text does not.
+- **Backing appearance** (default, to be confirmed by the product owner): the backing behind every mark and company monogram is the same opaque light neutral colour in both light and dark appearance, because most companies publish icons drawn for light backgrounds and the input asks for marks that look consistent in both appearances. The alternative, a backing that follows the appearance, is quieter in dark appearance but makes dark-on-transparent icons vanish there.
+- **Refresh**: refresh means the phone's ordinary refresh from the product backend, which happens when the app is opened, when it returns to the foreground, and when the member pulls a list to refresh where a screen offers that; a tester triggers one by sending the app to the background and bringing it back.
+- **Coverage definition** (default, adjustable by the product owner): well-known North American technology companies and technology employers means (a) every constituent of the Nasdaq-100, the S&P 500, or the S&P/TSX Composite whose primary business, as described by the company itself, is software, internet services, cloud, semiconductors, consumer electronics, or a technology platform such as a marketplace, mobility, or fintech platform; (b) privately held North American technology companies with at least 1,000 employees; and (c) technology employers with at least 200 engineering staff in Toronto, extended to each later launch city. Each company is recorded with its primary work email domain and any additional domains it publicly uses for employees. The target is at least 200 distinct approved companies; the assembled list is a product decision approved by the product owner. A company from the initial launch registry that meets none of the three clauses is kept and recorded with the clause "launch"; that clause is closed to new companies.
+- **Publicly published icon**: the largest icon (square preferred) a company publishes on its own public website for browsers and phone home screens that meets the limits in FR-025. The product uses it as-is; it never redraws or recolours it.
+- **Mark file limits** (default, adjustable by the product owner): at most 1 MB and at least 128 pixels on the shorter side, because the largest accessibility text sizes display a caption-height mark at roughly that many pixels on the sharpest supported screen, and 1 MB admits the largest icons companies publish while staying small next to an ordinary refresh.
+- **Unsuitable icons** fall back to the company monogram by being withheld; hand-drawn or product-team-supplied replacement marks are out of scope for this feature.
+- **Nominative use**: showing a company's own published icon beside a member's verified affiliation is treated as ordinary identification of the company, not endorsement, consistent with the existing verification disclosure; the product owner confirms this posture as part of the public launch checklist.
+- **Refresh policy**: marks are fetched once and refreshed only on request by the product team (after a rebrand or a failed fetch); no automatic periodic refresh is part of this feature.
+- **Retired companies**: when a company is no longer approved, its mark is withdrawn and the company monogram shown; members verified through it are otherwise unaffected.
+- **Rename propagation**: the company name is copied to a member's record at sign-up and is what every screen shows today; a registry rename changes only the mark and the name shown to members who join afterwards. Changing the name already shown for existing members is a separate behaviour and is out of scope.
+- **Registry shape**: today the registry holds one row per work email domain, each carrying a company name and industry, and each member's record refers to one domain row. This feature treats every domain that shares a display name as one verified company and expects the registry to be reshaped so that a company is one entry with one or more domains; the current approved list and the development sample data are carried over unchanged.
+- **Read models**: the mark reference reaches the phone inside the same relationship-scoped views that already carry the counterpart's company name (the current introduction, the active conversation, the conversation list, connections, and the member's own profile); no new way to look up another member is added.
+- **Backend hosting**: the product backend already stores private files and can store and serve small image files to signed-in members from the same hosting the phone already talks to. Marks are served from there; no outside hosting, content-delivery, or icon-lookup provider is introduced, and the phone talks to no new address to show a mark.
+- **Existing behaviour reused**: sign-up gating by work email domain, the server-side copy of company name and industry at sign-up, the verification wording, and the phone's refresh-from-backend model are all unchanged and reused.
 
-- [Assumption about target users, e.g., "Users have stable internet connectivity"]
-- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
-- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
-- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+### Scope Boundaries
+
+- In scope: marks and company monograms on the surfaces in FR-001, including the conversation header identity line (name, role, verified company); registry expansion; the operations action; mark serving and caching; withholding and refreshing marks; retention of the new operational records.
+- Out of scope: profile photos of any kind (still prohibited before mutual interest); marks for companies a member typed into their own experience history; member-uploaded or member-chosen marks; marks in notifications or emails; any browse or search of companies or members; any automatic periodic refresh; company pages, employee lists, or counts of members per company; changing the company name already shown for existing members after a rebrand; marks on the onboarding professional-identity and profile-review steps, the Edit profile Company field, the "Work email verified" settings row and the Work verification screen it opens, and Conversation details; any use of company as a filtering, ranking, matching, or grouping signal, and any presentation that groups or counts members by company; marks for any company that is not approved in the registry (a member whose affiliation is pending review, needs reverification, has changed, or whose company was removed sees the company monogram until an approved, verified company applies).
+
+### Constitution Check
+
+- **Principle I (one introduction, never a feed)**: no new surface, tab, list, or browsing of companies or members; the registry is not exposed as a list (FR-012); marks add recognition to existing surfaces only.
+- **Principle II (reciprocal interest is the only gate)**: marks are company imagery, not photos, so the no-photos-before-mutual-interest rule holds; the same mark appears regardless of either member's response, the private waiting state gains no counterpart identity, and the feature reveals no one-sided decision to the other member in any state (Story 1, scenario 8).
+- **Principle III (the outcome is an in-person meeting)**: not changed. Messaging stays plain text with timestamps and the context strip; the mark in the conversation header and rows identifies the counterpart's company only and adds no messaging feature, reaction, or reason to stay in the app.
+- **Principle IV (members own their data)**: a member learns only the counterpart's company, already shown today, never their email domain (FR-013); the conversation header's new role-and-company line repeats what the conversation list row already shows; the backend keeps no member-to-mark record (FR-014); verification wording and its honest disclosure are unchanged (FR-008); no third party is contacted from the phone (FR-011).
+- **Principle V (native, accessible client)**: marks and company monograms use the product's standard colours, spacing, and type and its reusable component conventions, scale with text size, meet the contrast and screen-reader contract, keep layouts intact at the narrowest width, use no motion, and keep the canonical vocabulary (FR-003, FR-006 to FR-010). The mark itself has no in-progress or failure state of its own: it is either the mark or the company monogram, with no spinner, error, or retry, because a missing decoration is not something a member can act on; the host surface's state matrix, including offline, is unchanged (SC-001).
+- **Principle VI (the backend owns trust)**: marks are fetched, stored, versioned, and served only by the product backend through an operations action that records every outcome, records "skipped" when a run is already in progress, and never raises (FR-022 to FR-026). Retention rule for new operational data: mark operations run records are purged after 180 days and the files of mark versions no longer served within 30 days, on the regular retention schedule (FR-027), verified by an automated check.
+- **Principle VII (deterministic tests)**: the plan will name the automated checks for the phone (mark and company monogram states), the product backend (access rules, retention, the operations action), and the fixed sample data used for previews.
+- **Principle VIII (calm technology)**: see the Calm Technology check below.
+- **Product and Platform Constraints, company registry**: the registry expansion is a product decision recorded and reviewed as such; each approved company should have a mark served by the product backend; the phone falls back to a company monogram and never fetches marks from a third party.
+- **Refused surfaces**: the feature adds no fifth tab, no browse or search surface, no score, no rejection notification, no gender field, no group events, and no way to message without mutual interest.
+
+**Calm Technology check** (`docs/DESIGN_PHILOSOPHY.md`, closing questions):
+
+- Does it reduce or add attention? It adds one small, still element beside a name and removes the need to read the company name to recognise it; it adds no text, control, step, or state. Net attention is the same or lower, and the element is peripheral.
+- Does it inform or alarm? Informs: a small still image beside a name; a missing mark becomes a quiet company monogram, never an error, spinner, or notice.
+- Can it live in the periphery? Yes: the mark is the height of a caption line, decorative to assistive technology, and carries no state, badge, or count.
+- Does it help two people meet, or does it keep them in the app? Helps them meet: quicker recognition and trust at the decision and while arranging coffee; it gives no new reason to open the app and sends no notification.
+- Can it fail quietly? Yes: no mark, a failed load, or an offline phone shows the company monogram in the same footprint; a failed server fetch is recorded per company and affects nobody.
+- Is there a simpler way? Simpler alternatives were weighed and rejected: no marks (loses recognition the constitution already relies on), fetching icons from a third-party icon service on the phone (leaks member activity and depends on someone else's uptime), and member-uploaded marks (unverifiable). Fetch once on the backend, cache, and fall back to a company monogram is the least technology that solves the problem.
+- Would a thoughtful professional find it normal? Yes: a company's mark beside a verified affiliation is a familiar professional convention, shown with the same honest "Work email verified" wording and no suggestion of employer endorsement.

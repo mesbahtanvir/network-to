@@ -105,7 +105,7 @@ jobs:
 
       - name: Deploy self-authenticating functions
         if: steps.staging.outputs.configured == 'true'
-        run: supabase functions deploy auth-handoff app-store-notifications deliver-notifications --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt --use-api
+        run: supabase functions deploy auth-handoff app-store-notifications deliver-notifications company-marks --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt --use-api
 
       - name: Deploy authenticated functions
         if: steps.staging.outputs.configured == 'true'
@@ -146,10 +146,11 @@ jobs:
         run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
 
       # auth-handoff serves browser callbacks, app-store-notifications is called by
-      # Apple, and deliver-notifications by the database schedule: none carry a
-      # Supabase JWT, so each authenticates its caller itself.
+      # Apple, deliver-notifications by the database schedule, and company-marks by
+      # the product team and the retention job: none carry a Supabase JWT, so each
+      # authenticates its caller itself.
       - name: Deploy self-authenticating functions
-        run: supabase functions deploy auth-handoff app-store-notifications deliver-notifications --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt --use-api
+        run: supabase functions deploy auth-handoff app-store-notifications deliver-notifications company-marks --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt --use-api
 
       - name: Deploy authenticated functions
         run: supabase functions deploy delete-account process-resume sync-subscription --project-ref "$SUPABASE_PROJECT_ID" --use-api

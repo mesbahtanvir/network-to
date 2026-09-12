@@ -202,8 +202,10 @@ struct IntroductionFlowView: View {
                 .font(.body)
                 .foregroundStyle(NTColor.textSecondary)
                 .multilineTextAlignment(.center)
-            ProgressView("Waiting for a reciprocal response…")
-                .tint(NTColor.accent)
+            Text("Nothing to do here. We’ll let you know only if it becomes mutual.")
+                .font(.footnote)
+                .foregroundStyle(NTColor.textSecondary)
+                .multilineTextAlignment(.center)
                 .padding(.top, NTSpacing.sm)
         }
         .frame(maxWidth: .infinity)

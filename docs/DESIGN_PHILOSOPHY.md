@@ -1,6 +1,6 @@
 # Design philosophy: calm technology
 
-**Status**: Adopted 2026-09-11 · Owner: product owner · Governs: `.specify/memory/constitution.md` Principle VIII
+**Status**: Adopted 2026-09-11, amended 2026-09-12 · Owner: product owner · Referenced by: `.specify/memory/constitution.md` Principle VIII (the constitution wins on conflict; changes to the concrete rules here are constitution amendments made in the same PR)
 
 network.to is calm technology. The phrase comes from Mark Weiser and John Seely Brown's
 1996 essay "The Coming Age of Calm Technology" and Amber Case's 2015 principles. The idea is
@@ -19,7 +19,8 @@ as soon as it can.
 
 - Today shows one introduction or one next action. There is nothing else to look at.
 - An introduction is a full screen with a clear decision, readable in under a minute. Pass
-  and Interested are equally easy; neither asks for a reason.
+  and Interested are both explicit text buttons. Pass confirms privately once and may invite
+  optional private feedback afterwards; a reason is never required.
 - The app has no reason to be opened when nothing has changed. There are no streaks, no daily
   check-ins, and no content to consume.
 - Onboarding asks for what the product needs and nothing more, and the résumé fast path fills
@@ -35,8 +36,10 @@ them.
 - Waiting states are honest and reassuring: "Your interest is private. We'll let you know
   only if it's mutual." A non-mutual outcome never blames anyone.
 - Empty states explain and offer at most one action. Sending nothing is treated as normal.
-- Errors say what was saved, what was not, and what the member can do. Retry is always
-  available for recoverable failures.
+- Errors must say what was saved, what was not, and what the member can do, and recoverable
+  failures must offer retry. Today most failures surface the backend's own message in a short
+  notice and only message sending offers retry; closing that gap is `NTInlineNotice` and
+  `NTOfflineState` in `docs/COMPONENT_STATE_SHEET.md`.
 
 ## 3. Make use of the periphery
 
@@ -45,9 +48,10 @@ of it should stay in the periphery.
 
 - Status lives in small, quiet signals: a status pill, a tab badge that counts only actionable
   items, a company mark next to a name. Nothing pulses, bounces, or animates to attract the
-  eye.
-- Notifications are the only thing that reaches a member outside the app, and only for the
-  five meaningful moments: an introduction is ready, interest is mutual, a message arrived, a
+  eye; the only motion on any screen is a native progress indicator while a request is in
+  flight.
+- Apart from the sign-in email, notifications are the only thing that reaches a member outside
+  the app, and only for the five meaningful moments: an introduction is ready, interest is mutual, a message arrived, a
   meeting is coming up, feedback is due. Their copy is short and never includes message
   bodies.
 - Available Today is a light, temporary signal with a visible expiry, not a status the member
@@ -73,19 +77,25 @@ Technology can convey status through simple signals and should not narrate.
 - Symbols, monograms, and company marks identify people and companies at a glance without a
   photo before mutual interest.
 - Sound is used only for the system notification sound. The app never plays its own.
-- Progress is shown with native, indeterminate indicators and real stage names, not with
-  playful loaders or skeleton people cards.
+- Progress is shown with native indicators: determinate only when the step count is known
+  (onboarding's Step X of Y), otherwise indeterminate with real stage names, never playful
+  loaders or skeleton people cards. Indeterminate indicators appear only while a request is in
+  flight, never while waiting on another person.
 
 ## 6. Work even when it fails
 
 Technology should degrade gracefully and never leave a person stranded.
 
-- The app opens to its last known state and refreshes when it can. Realtime updates are an
-  enhancement; returning to the foreground always refreshes.
-- Every network action has an offline state that says whether it was saved, queued, or not
-  submitted, and offers retry.
-- A company mark that cannot load falls back to a monogram. A notification that cannot be
-  delivered leaves the in-app state intact. A missing configuration on the server records a
+- The app restores its session on launch and whenever it returns to the foreground, then
+  replaces its state from one backend snapshot. Realtime updates are an enhancement;
+  foreground refresh is the recovery path. It does not yet cache the last snapshot for an
+  offline launch.
+- Every network action must have an offline state that says whether it was saved, queued, or
+  not submitted, and offers retry. Today only message sending has one (Not sent · Retry);
+  introduction responses roll back and re-enable the buttons; availability, preference, meetup,
+  feedback, and safety saves show the error but keep the optimistic state.
+- A company mark that cannot load falls back to the company monogram in the same footprint. A
+  notification that cannot be delivered leaves the in-app state intact. A missing configuration on the server records a
   failure instead of crashing.
 - Membership expiry pauses only new introductions; existing conversations and connections
   keep working.
@@ -106,7 +116,10 @@ The right amount of technology is the least that solves the problem.
 Technology should fit the norms of the people using it, in the situations they are in.
 
 - Interest is private until it is mutual, because that is how professionals actually behave.
-- Passing is easy and socially inexpensive; nobody is told they were passed on.
+- Passing is easy and socially inexpensive; the product never announces a Pass. (Today a member
+  who answers Interested after the other person has already passed is told at once that the
+  introduction did not work out; making that moment indistinguishable from waiting is a
+  recorded follow-up in the constitution's migration plan.)
 - Verification means control of a company email and says so; the product never implies
   employer endorsement.
 - Safety actions (report, block, end) are always reachable, never prominent, and never

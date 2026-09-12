@@ -9,8 +9,9 @@ introduction at a time, aimed at cross-company and cross-industry relationships.
 for the newcomer builder: someone who recently moved to a big city, works in technology, and
 wants like-minded people with shared goals and things to do together, building genuine
 relationships slowly and in person rather than seeking quick interactions, with no romantic
-or sexual framing. The audience starts with technology and widens only by product decision
-(`docs/PRODUCT_DEFINITION.md`). Every rule below protects that shape.
+or sexual framing. The audience starts with technology and widens only in the order recorded
+in `docs/PRODUCT_DEFINITION.md`; a step that admits members without a qualifying work email
+loosens Principle IV and requires a MAJOR amendment first. Every rule below protects that shape.
 
 - Today MUST present at most one introduction or one single most useful next action. It MUST
   NOT render a list, queue, carousel, or infinite scroll of candidates, and MUST NOT invite
@@ -51,9 +52,10 @@ a directory, and a queue turns a decision into comparison shopping.
 - The product MUST NOT compute or display a compatibility score, ranking, like, follower
   count, rating, endorsement, or popularity signal. Ranking machinery MUST stay invisible and
   relevance MUST be explained in plain professional language without AI branding.
-- Profile photos MUST NOT appear before mutual interest; the decision screen uses a monogram or
-  verified-company mark. This rule is marked Proposed in `docs/UI_DESIGN_SPEC.md` and binds UI
-  work until the product owner decides otherwise.
+- Profile photos MUST NOT appear before mutual interest; the decision screen uses the person's
+  monogram and the verified company's mark. The product owner adopted this rule on 2026-09-11 in
+  `docs/PRODUCT_DEFINITION.md` and `docs/DESIGN_PHILOSOPHY.md`; admitting photos before mutual
+  interest is a MAJOR amendment.
 
 Rationale: privacy of the decision is what makes passing cheap and interest honest. Any leak
 of one-sided interest turns a professional introduction into a dating mechanic.
@@ -143,8 +145,9 @@ in the narrowest form the feature needs, because trust is the product.
   Motion and Reduce Transparency honoured, colour never the sole indicator, layouts intact at
   320 pt. Motion MUST use system transitions only; looping, pulsing, countdown, and confetti
   animation MUST NOT be used.
-- Copy MUST use the canonical vocabulary (Introduction, Interested, Pass, Connection, Meet,
-  Available today, Verified company, member) and MUST NOT use match, compatibility, score,
+- Copy MUST use the canonical vocabulary listed in `docs/UI_DESIGN_SPEC.md` section 12
+  (Introduction, Interested, Pass, mutual interest, conversation, Connection, Meet, Available
+  today, Verified company, company mark, member) and MUST NOT use match, compatibility, score,
   like, swipe, deck, nearby people, streak, or AI-powered, romantic language, or artificial
   urgency.
 - Every surface MUST implement the state matrix in `docs/COMPONENT_STATE_SHEET.md` (resting, in
@@ -192,8 +195,9 @@ mechanics keeps the product professional.
   APNs secrets produce a recorded failure that the operations alert surfaces.
 - Retention MUST purge every operational table on schedule (notification events 90 days,
   matching runs 180 days, edge rate limits 2 days, App Store notification records 400 days,
-  posted alerts 30 days, incidents 180 days, expired handoffs and availabilities daily). Every
-  new operational table MUST add a rule there with a pgTAP proof.
+  posted alerts 30 days, incidents 180 days, company mark runs 180 days, files of retired
+  company mark versions 30 days, expired handoffs and availabilities daily). Every new
+  operational table MUST add a rule there with a pgTAP proof.
 - StoreKit 2 transactions and App Store Server Notifications MUST be verified server-side
   against Apple's certificate chain, bundle ID, product ID, environment, and account token. A
   verified transaction MUST never start a free month; the free month begins only when
@@ -238,18 +242,22 @@ design philosophy in `docs/DESIGN_PHILOSOPHY.md` is binding.
 - Every surface MUST require the smallest amount of attention that completes the member's
   next action, and the app MUST give no reason to be opened when nothing has changed: no
   streaks, check-ins, content to consume, or engagement prompts.
-- Copy and states MUST inform and create calm: plain professional language, no exclamation
-  points, no urgency, no countdowns, honest waiting and empty states, and errors that say what
-  was saved, what was not, and what the member can do.
+- Member-facing copy MUST use plain professional language and MUST NOT contain exclamation
+  points, artificial urgency (Principle V), or countdowns (Principle II). Waiting and empty
+  states MUST state what is true and what happens next and MUST offer at most one action.
+  Recoverable-failure states MUST state what was saved, what was not, and the member's next
+  action.
 - Status MUST live in the periphery: quiet status pills, badges that count only actionable
-  items, and company marks. Nothing MAY pulse, bounce, loop, or animate to attract attention,
-  and the app MUST NOT play its own sounds.
+  items, and company marks. Elements MUST NOT pulse, bounce, loop, or animate to attract
+  attention (this restates the motion rule in Principle V and adds bounce and attention-seeking
+  motion), and the app MUST NOT play its own sounds; the system notification sound is the only
+  sound.
 - The product MUST amplify people rather than imitate them: it introduces and steps back,
   explains relevance in the member's own context, shows no scores or AI branding, and never
   writes a member's goals for them.
 - Every feature MUST work when it fails: offline states that say whether an action was saved,
-  queued, or not submitted; visual elements with a native fallback (a monogram when a mark
-  cannot load); server jobs that record failures instead of crashing.
+  queued, or not submitted; visual elements with a native fallback (the company monogram when a
+  company mark cannot load); server jobs that record failures instead of crashing.
 - Every feature MUST use the minimum technology that solves the problem and MUST respect
   professional social norms: private interest, socially inexpensive passing, honest
   verification wording, reachable but unobtrusive safety actions.
@@ -268,10 +276,15 @@ attention inside the app, alarms, or performs is working against that purpose.
   `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the environment first, then Info.plist.
 - Membership: one account-scoped free month beginning at onboarding completion, then the
   monthly product `com.mesbahtanvir.networkto.monthly` at Apple's localized price.
-- Company registry: `company_domains` lists well-known North American technology companies
-  and employers; expansion is a product decision recorded in a migration. Each approved
-  company SHOULD have a company mark served by the product backend; the client MUST fall back
-  to a monogram and MUST NOT fetch marks from any third-party service.
+- Company registry: `companies` lists well-known North American technology companies and
+  employers, one row per company with one or more `company_domains`, each recorded with the
+  coverage clause that admitted it; expansion is a product decision recorded in a migration.
+  Each approved company SHOULD have a company mark fetched only from the company's own website
+  and served by the product backend from the public `company-marks` bucket under versioned
+  paths; the client MUST fall back to the company monogram, MUST show a mark only while the
+  affiliation is verified and the company approved, and MUST NOT fetch marks from any
+  third-party service. Marks are never refreshed automatically; the product team withholds,
+  refreshes, and inspects them through the `company-marks` operations action.
 - Backend: Supabase Auth (PKCE magic link, Before User Created hook), Postgres with RLS and
   `security definer` RPCs, Realtime limited to `conversations`, `messages`, `meetups`, and
   `notification_events`, Deno Edge Functions under `supabase/functions/<name>/index.ts` with
@@ -280,9 +293,9 @@ attention inside the app, alarms, or performs is working against that purpose.
   stating intent and any operator step. The local stack uses the `5532x` port range; pinned
   tools are Supabase CLI 2.117.0 and Deno v2.5.2.
 - Self-authenticating functions deployed with `--no-verify-jwt`: `auth-handoff`,
-  `app-store-notifications`, `deliver-notifications`. Member-authenticated: `delete-account`,
-  `process-resume`, `sync-subscription`. `generate-introductions` is an operations tool and
-  is not deployed by default.
+  `app-store-notifications`, `deliver-notifications`, `company-marks`. Member-authenticated:
+  `delete-account`, `process-resume`, `sync-subscription`. `generate-introductions` is an
+  operations tool and is not deployed by default.
 - Schedules, all prefixed `network-to-`: matching hourly at :07 (batch 25), meetup follow-ups
   hourly at :37, notification dispatch every minute, operations alerts every 15 minutes,
   retention daily at 04:15 UTC.
@@ -297,8 +310,9 @@ attention inside the app, alarms, or performs is working against that purpose.
   are invited.
 - Secret placement: function secrets in the Supabase Dashboard; `SUPABASE_ACCESS_TOKEN`,
   `SUPABASE_DB_PASSWORD`, and `SUPABASE_PROJECT_ID` in the protected GitHub environments
-  `production` and `staging`; `project_url`, `notification_job_secret`, and
-  `ops_alert_webhook_url` in Vault. `supabase/seed.sql` is development-only.
+  `production` and `staging`; `project_url`, `notification_job_secret`,
+  `ops_alert_webhook_url`, and `company_marks_job_secret` in Vault. `supabase/seed.sql` is
+  development-only.
 - Design system: the semantic colour tokens, spacing scale, radii, typography roles, and
   SF Symbol mapping in `docs/UI_DESIGN_SPEC.md` are the only permitted visual values.
 - Document status: `docs/UI_DESIGN_SPEC.md` and `docs/COMPONENT_STATE_SHEET.md` are not yet
@@ -351,7 +365,22 @@ documents it reconciles. It MUST state the rule being added, changed, or removed
 evidence or product decision motivating it, the affected specs, plans, templates, and docs,
 and a migration plan for existing code. It MUST be approved by the product owner (the
 repository owner). Merging an amendment MUST bump the version and set Last Amended to the
-merge date.
+merge date. The concrete rules and the Calm Technology check questions in
+`docs/DESIGN_PHILOSOPHY.md`, and the audience and widening order in
+`docs/PRODUCT_DEFINITION.md`, are part of this constitution for versioning: changing them is
+an amendment (MINOR to add or tighten, MAJOR to loosen), not a documentation update.
+
+Migration plan for 1.1.0 and 1.2.0 (existing code measured against Principles V and VIII):
+the repeating pulse on the résumé processing glyph and the perpetual spinner on the private
+waiting state were removed, and Today now greets the signed-in member and names the actual
+counterpart, all in the 1.2.0 PR. Still open, each a recorded follow-up with its own PR:
+`respond_to_introduction` returns `not_mutual` immediately after a counterpart's Pass and the
+client shows "This introduction didn't work out" (make it indistinguishable from waiting, which
+also needs a product decision on holding the member's one active introduction until expiry);
+`transientMessage` renders errors with the success glyph and auto-dismisses (give notices a
+kind and keep errors until dismissed); availability, preference, meetup, feedback, and safety
+saves keep optimistic state after a failure (add the `NTOfflineState` matrix). Until those
+land, the SHOULD deviations they represent are recorded here rather than in each PR.
 
 Versioning follows MAJOR.MINOR.PATCH:
 - MAJOR: a principle is removed or redefined, a refused surface is admitted, a privacy or
@@ -369,4 +398,4 @@ Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
 `docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
 same PR as any change that alters what they describe.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
+**Version**: 1.2.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12

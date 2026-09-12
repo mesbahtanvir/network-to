@@ -32,9 +32,14 @@ struct TodayView: View {
         }
     }
 
+    private var greetingText: String {
+        let firstName = store.member.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return firstName.isEmpty ? daypartGreeting : "\(daypartGreeting), \(firstName)"
+    }
+
     private var greeting: some View {
         VStack(alignment: .leading, spacing: NTSpacing.xs) {
-            Text("\(daypartGreeting), \(store.member.firstName.isEmpty ? "there" : store.member.firstName)")
+            Text(greetingText)
                 .font(.headline)
             Text("One worthwhile conversation is enough.")
                 .font(.subheadline)

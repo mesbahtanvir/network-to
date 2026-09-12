@@ -63,7 +63,11 @@ actor MockBackendService: BackendService {
             "1password.com": "1Password",
             "clio.com": "Clio",
             "cohere.com": "Cohere",
-            "thomsonreuters.com": "Thomson Reuters"
+            "thomsonreuters.com": "Thomson Reuters",
+            "servicenow.com": "ServiceNow",
+            "databricks.com": "Databricks",
+            "tenstorrent.com": "Tenstorrent",
+            "celestica.com": "Celestica"
         ]
 
         if let company = knownCompanies[domain] {
@@ -119,12 +123,21 @@ actor MockBackendService: BackendService {
         try await pause()
     }
 
+    func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data? {
+        try await pause()
+        guard reference.key == "northstar-ai" else { return nil }
+        return MockData.sampleMarkPNG
+    }
+
     private func pause() async throws {
         try await Task.sleep(for: latency)
     }
 }
 
 enum MockData {
+    /// A fixed 128 x 128 solid PNG standing in for Northstar AI's published icon in previews.
+    static let sampleMarkPNG = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAAAyUlEQVR42u3RMQ0AAAgEsdfIggj878iAockpuKamdVgsAABAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAFwAAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAHxoAbn8BAyRRrRLAAAAAElFTkSuQmCC") ?? Data()
+
     static let resumeDraft = ProfileImportSuggestions(
         name: "Alex Morgan",
         role: "Engineering Director",

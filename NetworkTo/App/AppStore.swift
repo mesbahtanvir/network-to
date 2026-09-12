@@ -22,10 +22,14 @@ final class AppStore: ObservableObject {
 
     @Published private(set) var member: ProfessionalProfile
     @Published private(set) var introduction: Introduction
+    /// Company marks this phone holds, keyed by reference. Never leaves the store; cleared with local state.
+    @Published private(set) var companyMarks: [CompanyMarkReference: Data] = [:]
     private let defaults: UserDefaults
     private let backend: any BackendService
+    private let markCache: CompanyMarkDiskCache
     private var pendingCompany: String?
     private var backendUpdatesTask: Task<Void, Never>?
+    private var companyMarkTasks: [CompanyMarkReference: Task<Void, Never>] = [:]
 
     init(
         defaults: UserDefaults = .standard,
@@ -34,12 +38,14 @@ final class AppStore: ObservableObject {
         hasCompletedOnboarding: Bool? = nil,
         seedMockData: Bool = true,
         membership: MembershipStatus? = nil,
-        backend: (any BackendService)? = nil
+        backend: (any BackendService)? = nil,
+        markCache: CompanyMarkDiskCache? = nil
     ) {
         let resolvedBackend = backend ?? BackendFactory.make()
         let usesMockBackend = !resolvedBackend.isLive
         self.defaults = defaults
         self.backend = resolvedBackend
+        self.markCache = markCache ?? CompanyMarkDiskCache()
         self.phase = resolvedBackend.isLive ? .searching : startPhase
         self.hasAuthenticated = hasAuthenticated ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.authenticationKey))
         self.hasCompletedOnboarding = hasCompletedOnboarding ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.onboardingKey))
@@ -174,9 +180,61 @@ final class AppStore: ObservableObject {
             } else {
                 phase = .searching
             }
+            prefetchCompanyMarks(for: data)
         } catch {
             transientMessage = error.localizedDescription
         }
+    }
+
+    /// Fetches the marks for the companies on screen after a refresh so a monogram is replaced
+    /// in place as soon as the copy arrives; failures leave the monogram and say nothing.
+    private func prefetchCompanyMarks(for data: BackendSnapshot) {
+        var references = [data.member.displayedCompanyMark, data.introduction?.person.displayedCompanyMark, data.conversation?.person.displayedCompanyMark]
+        references.append(contentsOf: data.connections.map { $0.person.displayedCompanyMark })
+        for reference in Set(references.compactMap { $0 }) {
+            Task { await ensureCompanyMark(reference) }
+        }
+    }
+
+    func companyMarkData(for reference: CompanyMarkReference?) -> Data? {
+        guard let reference else { return nil }
+        return companyMarks[reference]
+    }
+
+    /// Loads a mark from memory, then the phone's cache, then the product backend. One load runs
+    /// per reference at a time; a mark that cannot be loaded simply stays a monogram.
+    func ensureCompanyMark(_ reference: CompanyMarkReference?) async {
+        guard let reference, companyMarks[reference] == nil else { return }
+        if let inFlight = companyMarkTasks[reference] {
+            await inFlight.value
+            return
+        }
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.loadCompanyMark(reference)
+        }
+        companyMarkTasks[reference] = task
+        await task.value
+        if companyMarkTasks[reference] == task { companyMarkTasks[reference] = nil }
+    }
+
+    private func loadCompanyMark(_ reference: CompanyMarkReference) async {
+        if let cached = await markCache.read(reference), !cached.isEmpty {
+            companyMarks[reference] = cached
+            return
+        }
+        guard let data = try? await backend.loadCompanyMark(reference), !data.isEmpty else { return }
+        companyMarks[reference] = data
+        await markCache.write(data, for: reference)
+    }
+
+    /// Forgets every cached mark; part of clearing local state at sign-out and after deletion.
+    func clearCompanyMarks() {
+        for task in companyMarkTasks.values { task.cancel() }
+        companyMarkTasks = [:]
+        companyMarks = [:]
+        let cache = markCache
+        Task.detached(priority: .utility) { await cache.removeAll() }
     }
 
     func validateCompany(for email: String) async throws -> CompanyDomainDecision {
@@ -265,6 +323,7 @@ final class AppStore: ObservableObject {
         hasAuthenticated = false
         defaults.set(false, forKey: Self.authenticationKey)
         selectedTab = .today
+        clearCompanyMarks()
         Task {
             do { try await backend.signOut() }
             catch { transientMessage = error.localizedDescription }
@@ -659,6 +718,7 @@ final class AppStore: ObservableObject {
         availability = nil
         selectedTab = .today
         membership = .trial()
+        clearCompanyMarks()
         if includeOnboarding {
             hasCompletedOnboarding = false
             defaults.set(false, forKey: Self.onboardingKey)

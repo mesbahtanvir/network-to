@@ -76,6 +76,8 @@ protocol BackendService: Sendable {
     func submitReport(category: ReportCategory, note: String, subjectID: UUID?, conversationID: UUID?) async throws
     func deleteAccount() async throws
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws
+    /// Bytes of a company mark served by the product backend, or nil when it has none.
+    func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data?
 }
 
 extension BackendService {
@@ -101,6 +103,7 @@ extension BackendService {
     func removeConnection(_ id: UUID) async throws {}
     func deleteAccount() async throws {}
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws {}
+    func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data? { nil }
 }
 
 struct SupabaseConfiguration: Sendable {

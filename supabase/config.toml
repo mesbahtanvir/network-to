@@ -391,7 +391,7 @@ deno_version = 2
 # Functions whose callers cannot present a Supabase JWT authenticate themselves:
 # auth-handoff serves browser callbacks, app-store-notifications verifies Apple's
 # signature, and deliver-notifications checks the shared job secret. Production
-# deployments pass --no-verify-jwt for the same three functions.
+# deployments pass --no-verify-jwt for the same four functions.
 [functions.auth-handoff]
 verify_jwt = false
 
@@ -399,6 +399,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.deliver-notifications]
+verify_jwt = false
+
+[functions.company-marks]
 verify_jwt = false
 
 [analytics]
