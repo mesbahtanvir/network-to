@@ -9,6 +9,13 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: NTSpacing.xl) {
+                    if store.shouldOfferNotificationInvite {
+                        NTNotificationInviteCard(
+                            turnOn: { Task { await store.requestNotificationAuthorization() } },
+                            notNow: { store.declineNotificationInvite() }
+                        )
+                        .padding(.top, NTSpacing.xs)
+                    }
                     greeting
                     if store.isRefreshing {
                         ProgressView("Refreshing your context…")
@@ -24,12 +31,21 @@ struct TodayView: View {
             .ntScreenBackground()
             .navigationTitle("Today")
             .refreshable { await store.refreshFromBackend() }
+            .onChange(of: introductionOnScreen, initial: true) { _, onScreen in
+                if onScreen { store.didViewNotificationItem(.introduction(store.introduction.id)) }
+            }
             .sheet(isPresented: $showingAvailability) {
                 AvailableTodaySheet()
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
         }
+    }
+
+    /// The introduction is on screen while Today is the selected tab in its ready state, so any
+    /// notification about it can leave the phone's list.
+    private var introductionOnScreen: Bool {
+        store.selectedTab == .today && store.phase == .ready
     }
 
     private var greetingText: String {

@@ -4,7 +4,7 @@ struct MessagesView: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $store.messagesPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: NTSpacing.xl) {
                     Text("For making plans, not collecting chats.")
@@ -22,6 +22,7 @@ struct MessagesView: View {
             }
             .ntScreenBackground()
             .navigationTitle("Messages")
+            .navigationDestination(for: MessagesDestination.self) { _ in ConversationView() }
         }
     }
 
@@ -72,9 +73,7 @@ struct MessagesView: View {
     }
 
     private func conversationCard(_ conversation: Conversation) -> some View {
-        NavigationLink {
-            ConversationView()
-        } label: {
+        NavigationLink(value: MessagesDestination.conversation(conversation.id)) {
             VStack(alignment: .leading, spacing: NTSpacing.md) {
                 HStack(alignment: .top, spacing: NTSpacing.md) {
                     NTMonogram(initials: conversation.person.initials, size: 52)
@@ -231,7 +230,12 @@ struct ConversationView: View {
                 .accessibilityLabel("Conversation options")
             }
         }
-        .onAppear { store.openConversation() }
+        .onAppear {
+            store.openConversation()
+            if let id = store.conversation?.id {
+                store.didViewNotificationItem(.conversation(id))
+            }
+        }
         .sheet(isPresented: $showingFeedback) {
             MeetupFeedbackView()
                 .presentationDetents([.large])

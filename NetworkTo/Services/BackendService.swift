@@ -78,6 +78,11 @@ protocol BackendService: Sendable {
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws
     /// Bytes of a company mark served by the product backend, or nil when it has none.
     func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data?
+    /// Attaches this phone's APNs token to the signed-in member; a token another member
+    /// registered on this phone is reassigned.
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws
+    /// Detaches the token from the signed-in member; must run while the session is still valid.
+    func unregisterDeviceToken(_ token: String) async throws
 }
 
 extension BackendService {
@@ -104,6 +109,8 @@ extension BackendService {
     func deleteAccount() async throws {}
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws {}
     func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data? { nil }
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws {}
+    func unregisterDeviceToken(_ token: String) async throws {}
 }
 
 struct SupabaseConfiguration: Sendable {

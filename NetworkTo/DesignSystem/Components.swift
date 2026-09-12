@@ -145,6 +145,36 @@ struct NTPrivacyNote: View {
     }
 }
 
+/// The one explanation that precedes the phone's notification permission dialog. It sits inline
+/// at the top of Today, never modal, with no motion; both choices are plain text with equal
+/// targets, and nothing about it persuades.
+struct NTNotificationInviteCard: View {
+    let turnOn: () -> Void
+    let notNow: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: NTSpacing.md) {
+            Text("When network.to will notify you")
+                .font(.headline)
+            Text("We’ll notify you only when an introduction is ready, when interest is mutual, when you receive a message, before a meeting, and when private feedback is due. You can change this anytime in iPhone Settings.")
+                .font(.subheadline)
+                .foregroundStyle(NTColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Turn on notifications", action: turnOn)
+                .buttonStyle(NTPrimaryButtonStyle())
+                .accessibilityHint("Asks iPhone for permission to notify you")
+            Button("Not now", action: notNow)
+                .buttonStyle(NTSecondaryButtonStyle())
+                .accessibilityHint("Keeps notifications off. You can turn them on later from Profile")
+        }
+        .padding(NTSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .ntSurface()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Notification permission")
+    }
+}
+
 struct NTJourneyStep: View {
     let symbol: String
     let title: String

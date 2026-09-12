@@ -595,6 +595,27 @@ Copy:
 
 Supporting content may show introduction frequency and Available Today. It must not fill the screen with events, articles, or people to browse.
 
+### `NTNotificationInviteCard`
+
+The single explanation before the phone's permission dialog. Shown at the top of Today only while Today is searching or waiting privately, the member can receive introductions, the phone has never been asked, and the member has not chosen **Not now** on this phone.
+
+Anatomy:
+
+- **When network.to will notify you**;
+- one sentence naming the five reasons and one stating that delivery is managed in iPhone Settings;
+- **Turn on notifications** (primary) and **Not now** (secondary), equal targets of at least 44 pt.
+
+States:
+
+- resting: card visible with both choices;
+- in progress: the phone's dialog is open and the card is already gone;
+- success: allowed; nothing is shown and the phone is registered silently;
+- recoverable failure: registration failed; nothing is shown and it is retried on the next activation;
+- terminal: declined in the dialog or **Not now**; the card is gone for this member on this phone;
+- offline: the dialog works offline and registration is queued silently (a recorded deviation from the offline wording rule, because the member's own action completed on the phone).
+
+Never a sheet, alert, badge, sound, or animation; never shown beside an undecided introduction or a mutual-interest action.
+
 ### `NTInlineNotice`
 
 Variants:
@@ -658,6 +679,8 @@ Block and Report require clear consequence text. Report categories follow the PR
 | Mutual interest | Notification ready | Opening chat | Conversation active | Retry loading conversation | Member restricted |
 | Message | Draft | Sending | Sent | Failed/retry | Conversation ended/blocked |
 | Meetup feedback | Unselected | Submitting | Recorded/Connection created | Retry | Dismissed/expired prompt |
+| Notification invitation | Card with two choices | Phone dialog open | Allowed; card gone; silent registration | Registration retried silently on next activation | Declined or Not now; card gone |
+| Tapped notification | Launch screen or current screen | Session restore and refresh | Today or the referenced conversation | Refresh failed; destination in last known state | Session invalid; sign-in shown; route discarded |
 
 ## 12. Accessibility contract
 

@@ -13,7 +13,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - 1:1 meetup planning, private feedback, and opt-in connection creation
 - Temporary coarse-grained availability
 - Reporting, blocking, ending conversations, and account deletion
-- Notification management through native iPhone Settings
+- Remote notifications for exactly five moments (introduction ready, mutual interest, new message, meeting reminder, feedback due), asked for once from a calm card on Today after onboarding, opening Today or the conversation when tapped, with delivery preferences kept in native iPhone Settings
 - One account-scoped free month, followed by a native Apple monthly membership
 - No gender collection, gender filters, or gender-based ranking
 - Company marks beside every verified company name (introduction, conversations, Connections, profile), fetched once server-side from each company's own website and served only from the project's own storage, with a company monogram whenever no mark is available; a registry of 249 North American technology companies and employers

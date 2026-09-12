@@ -161,7 +161,9 @@ Notification preferences and permission remain in native iPhone Settings, as int
 - Meetups become `feedback_due` three hours after their scheduled start and both participants receive one `feedback_due` event, so private feedback is requested even when nobody reopens the conversation.
 - Undelivered events stay available to the in-app stream and are removed after 90 days.
 
-Delivery needs an APNs authentication key from the Apple Developer account: set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets and never place the key in iOS. Until they are set, claimed events fail with "APNs is not configured", which the operations alert surfaces. The iOS app still has to request permission, register for remote notifications, and call `register_device_token` with the APNs token; that is the remaining client step.
+Delivery needs an APNs authentication key from the Apple Developer account: set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets and never place the key in iOS. Until they are set, claimed events fail with "APNs is not configured", which the operations alert surfaces.
+
+The iOS app asks for permission once, from a card at the top of Today after onboarding (never at launch, on the sign-in screens, or during onboarding), and only while the phone has never been asked; a member who chooses "Not now" is not asked again and can turn notifications on from the Profile row. While alerts are allowed and a member with complete onboarding is signed in, the app registers the phone's APNs token through `register_device_token` on every activation, so `updated_at` is the registration's last-confirmed time. The channel is read from the embedded provisioning profile: `sandbox` for a development-profile build, `production` for TestFlight and App Store installs; the simulator and demonstration mode register nothing. Before signing out the app removes the token through `unregister_device_token`, waiting at most five seconds; after a confirmed account deletion it forgets its local notification memory. Tapping a notification opens Today for `introduction_ready` and the referenced conversation for the other four kinds, in every app state; while the member is already on that screen the banner is suppressed and the state refreshes quietly, and notifications about an item leave the phone's list once the item is on screen. The app target carries `NetworkTo/NetworkTo.entitlements` (`aps-environment`), so Push Notifications must be enabled on the App ID in the Apple Developer account before a device build can obtain a token; automatic signing does this on the first device build when Xcode is signed in with an account allowed to edit identifiers.
 
 ## Membership and App Store setup
 
@@ -196,12 +198,13 @@ Already implemented:
 - CI validation with pgTAP and Deno unit tests, and a staging-then-production deployment path that deploys only from `main`.
 - Database behavior and authorization coverage for two isolated users; run `supabase test db` before each deployment.
 - A registry of 249 verified companies over 258 work-email domains, each recorded with the coverage clause that admitted it, and company marks fetched from each company's own website, served versioned from the project's storage, with withhold, refresh, and purge operations.
+- iPhone remote notifications: permission asked once from Today after onboarding, token registration on every activation and removal before sign-out, tap routing to Today or the referenced conversation, banner suppression on the destination screen, and delivery preferences kept in iPhone Settings.
 
 Required before a public App Store launch:
 
 - Configure custom SMTP and verify delivery from representative corporate inboxes.
 - Create the App Store Connect subscription, set `APPLE_APP_ID`, add final hosted Terms and Privacy URLs, and point App Store Server Notifications v2 (production and sandbox) at the deployed `app-store-notifications` function.
-- Create an APNs authentication key, set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets, and add remote-notification registration to the iOS app (request permission, register, call `register_device_token`); never expose the APNs private key to iOS.
+- Create an APNs authentication key, set `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` as function secrets, and enable Push Notifications on the App ID `com.mesbahtanvir.networkto` so device builds obtain a token; never expose the APNs private key to iOS.
 - Create the Vault secrets `project_url`, `notification_job_secret`, and `ops_alert_webhook_url`, and set the matching `NOTIFICATION_JOB_SECRET` function secret.
 - Complete privacy and data-processing review for DeepSeek before inviting public users, and disclose that redacted résumé text is processed by the provider.
 - Create the staging Supabase project and the `staging` GitHub environment so every `main` deployment reaches staging before production.

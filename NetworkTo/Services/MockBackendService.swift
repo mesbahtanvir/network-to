@@ -1,14 +1,23 @@
 import Foundation
 
 actor MockBackendService: BackendService {
-    nonisolated let isLive = false
+    /// Tests may flag the mock as live to exercise the live-only paths (session restore, device
+    /// registration) deterministically; mock-only conveniences stay guarded by `!isLive`.
+    nonisolated let isLive: Bool
     private let latency: Duration
+    private let hasSession: Bool
+    private(set) var registeredDevices: [DeviceRegistration] = []
+    private(set) var unregisteredDeviceTokens: [String] = []
+    /// Ordered record of the calls tests assert on: `register:<token>`, `unregister:<token>`, `signOut`.
+    private(set) var events: [String] = []
 
-    init(latency: Duration = .milliseconds(280)) {
+    init(latency: Duration = .milliseconds(280), isLive: Bool = false, hasSession: Bool = false) {
         self.latency = latency
+        self.isLive = isLive
+        self.hasSession = hasSession
     }
 
-    func hasValidSession() async -> Bool { false }
+    func hasValidSession() async -> Bool { hasSession }
 
     func bootstrap() async throws -> BackendSnapshot {
         try await pause()
@@ -98,7 +107,24 @@ actor MockBackendService: BackendService {
 
     func acceptMagicLinkCallback(_ url: URL) async throws {}
 
-    func signOut() async throws {}
+    func signOut() async throws {
+        events.append("signOut")
+    }
+
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws {
+        try await pause()
+        if token.hasPrefix("dead") { throw MockServiceError.requestFailed }
+        if let registration = DeviceRegistration(token: token, environment: environment) {
+            registeredDevices.append(registration)
+        }
+        events.append("register:\(token)")
+    }
+
+    func unregisterDeviceToken(_ token: String) async throws {
+        try await pause()
+        unregisteredDeviceTokens.append(token)
+        events.append("unregister:\(token)")
+    }
 
     func deliverMessage(_ body: String, conversationID: UUID?, idempotencyKey: UUID) async throws {
         try await pause()

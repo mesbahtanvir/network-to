@@ -218,6 +218,18 @@ actor SupabaseBackendService: BackendService {
         try await client.auth.signOut()
     }
 
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws {
+        try await client
+            .rpc("register_device_token", params: DeviceTokenParameters(token: token, environment: environment.rawValue))
+            .execute()
+    }
+
+    func unregisterDeviceToken(_ token: String) async throws {
+        try await client
+            .rpc("unregister_device_token", params: DeviceTokenRemovalParameters(token: token))
+            .execute()
+    }
+
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws {
         try await client.functions.invoke(
             "sync-subscription",
@@ -1127,6 +1139,15 @@ private struct MeetupFeedbackParameters: Encodable {
 private struct ConversationParameters: Encodable {
     let conversationID: UUID
     enum CodingKeys: String, CodingKey { case conversationID = "p_conversation_id" }
+}
+private struct DeviceTokenParameters: Encodable {
+    let token: String
+    let environment: String
+    enum CodingKeys: String, CodingKey { case token = "p_token"; case environment = "p_environment" }
+}
+private struct DeviceTokenRemovalParameters: Encodable {
+    let token: String
+    enum CodingKeys: String, CodingKey { case token = "p_token" }
 }
 private struct MemberParameters: Encodable {
     let memberID: UUID

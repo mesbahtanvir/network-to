@@ -1,131 +1,283 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: iPhone Remote Notifications
 
-**Feature Branch**: `[###-feature-name]`
+**Feature Branch**: `001-remote-notifications`
 
-**Created**: [DATE]
+**Created**: 2026-09-11
 
 **Status**: Draft
 
-**Input**: User description: "$ARGUMENTS"
+**Input**: User description: "iPhone remote notifications for network.to: ask a member for notification permission at the right moment (never on first launch, only once the member has completed onboarding and can receive introductions), register the member's phone so the existing backend delivery pipeline can reach it, deliver the five existing notification kinds (introduction ready, mutual interest, new message, meeting reminder, feedback due), open the right screen when the member taps a notification (Today for an introduction, Messages for mutual interest, messages, meeting reminders and feedback), behave calmly when a notification arrives while the app is open, and keep delivery preferences in iPhone Settings. Stop delivering to a phone after sign-out or account deletion."
+
+## Clarifications
+
+### Session 2026-09-11
+
+- Q: When a member signs in on a phone where notifications for the app are already allowed (by a previous member or a previous install), should the app register the phone silently without showing the explanation, or show the explanation to that member once and register only after they choose "Turn on notifications"? → A: Register silently and show no explanation: the phone's permission state is what the member can see and change in iPhone Settings, and the explanation exists only to precede the phone's one permission dialog (FR-002, FR-007, User Story 1 scenario 16, Edge Cases "Shared phone already asked", Assumptions).
+- Q: Should the app leave a phone's registration alone when the member turns notifications off for the app in iPhone Settings (the phone decides whether to display), or remove the registration and restore it on the next app activation? → A: Leave it alone: the app keeps the registration and does nothing; turning notifications back on resumes delivery immediately with no app involvement (FR-031, User Story 4 scenarios 3 and 4, Edge Cases "Permission changed later in iPhone Settings", Assumptions).
+- Q: Should clearing delivered notifications from the phone's list when the member views the conversation or the current introduction be a required behaviour with acceptance scenarios, or a courtesy that may be left out? → A: Required (MUST) for both conversations and the current introduction, with an acceptance scenario for each (FR-029, User Story 3 scenarios 8 and 9, Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+The backend already creates notification events for exactly five reasons, decides the calm copy for each, retries delivery with back-off, and retires phones that can no longer be reached. What is missing is the phone: nothing asks the member for permission, nothing tells the backend how to reach their iPhone, nothing stops delivery when they sign out, and nothing opens the right screen when a notification is tapped. This feature adds that client side and nothing more. Notifications remain scarce and tied to a real professional interaction; none of them exist to bring a member back to the app.
 
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+The five kinds and the copy the phone will show are fixed by the backend and reused unchanged:
 
-### User Story 1 - [Brief Title] (Priority: P1)
+| Kind | Title | Body shown on the phone | Opens |
+| --- | --- | --- | --- |
+| Introduction ready | A new introduction is ready | Someone in your city may be worth meeting. Take a look when you have a moment. | Today |
+| Mutual interest | Mutual interest | *First name* is interested in meeting too. You can now message each other. | Messages |
+| New message | New message | *First name* sent you a message. | Messages |
+| Meeting reminder | Your 1:1 is coming up | Your meeting with *first name* is coming up. The details are in Messages. | Messages |
+| Feedback due | How did it go? | Share private feedback on meeting *first name* and decide whether to stay connected. | Messages |
 
-[Describe this user journey in plain language]
+When no first name is available, the phone shows the backend's nameless variant for the kind instead: "You are both interested in meeting. You can now message each other.", "You have a new message.", "Your meeting is coming up. The details are in Messages.", "Share private feedback on your meeting and decide whether to stay connected." Either variant is the expected copy for that kind.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+The first name appears only once both members chose Interested; a pending introduction is anonymous; a message body is never included; a Pass never produces a notification for anyone.
 
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+### User Story 1 - Ask at the Right Moment, Register the Phone, and Stop on Sign-Out (Priority: P1)
 
-**Acceptance Scenarios**:
+A member who has just finished professional onboarding arrives on Today for the first time as someone who can receive introductions. The app explains, once and in a few calm sentences, the only things it will ever notify them about, and offers two text-labeled choices: turn notifications on, or not now. The explanation is a card at the top of Today, not a pop-up: Today stays usable beneath it, and the card stays until the member answers. If the member chooses to turn notifications on, the phone shows its own built-in permission dialog. When the member allows, the app quietly obtains the phone's delivery address for this app and registers it with the member's account so the existing backend delivery pipeline can reach this phone. No prompt of any kind appears on first launch, on the sign-in and verification screens, or during onboarding, and the app never asks a second time on its own: a member who chose "Not now" is not asked again even after signing out and back in, and the "Notifications" row in Profile is their way back. When the member signs out, the app removes this phone's registration before ending the session; when an account is deleted, the existing server-side deletion removes every registration and the app clears its local notification memory only after that confirmation.
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+**Why this priority**: Nothing in this feature works until a phone is registered, and a registration without its removal is not a shippable increment: a signed-out account's notifications would keep reaching a handed-over or shared phone, naming the member's professional contacts. Asking at the right moment also decides how many members ever allow notifications: the phone gives the app one chance to ask, and asking before the member understands the product wastes it.
 
----
-
-### User Story 2 - [Brief Title] (Priority: P2)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: On a fresh install, sign up, complete onboarding, and confirm the explanation appears only when Today first appears. Choose to turn notifications on, allow in the phone's dialog, and confirm the member's account now holds a registration for this phone. Then sign out, have the backend create each kind of event for that member, and confirm nothing reaches the phone. Finally, sign in again and have the backend create one introduction-ready event, and confirm the notification reaches the phone's lock screen with the defined copy. This last step is the end-to-end proof and needs the configured staging backend named under Assumptions; scenarios 1 to 5, 7 to 15, and 19 to 20 do not. This story delivers value alone: from this point every existing kind reaches the member and stops when they sign out, even before tapping has any special routing.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a fresh install with no signed-in member, **When** the app launches for the first time, **Then** no notification explanation and no phone permission dialog appear.
+2. **Given** a member who has signed in but not completed onboarding, **When** they move through every onboarding step, including résumé import and review, **Then** no notification explanation or permission dialog appears at any step.
+3. **Given** a member who has just completed onboarding, whose free month has therefore begun, and whose phone has never been asked for notification permission, **When** Today appears for the first time in its searching state, **Then** the app shows a single calm explanation as a card at the top of Today, naming the five reasons it notifies and stating that delivery is managed in iPhone Settings, with the two text-labeled choices "Turn on notifications" and "Not now", and Today's own content remains visible and fully usable beneath it with nothing modal.
+4. **Given** the explanation is showing, **When** the member chooses "Turn on notifications", **Then** the phone's own permission dialog appears and the explanation is dismissed.
+5. **Given** the member allowed notifications in the phone's dialog and the phone is online, **When** the phone issues the delivery address for this app, **Then** the app registers it with the member's account within one minute, records which delivery channel this phone uses (the developer channel or the live channel), and shows no confirmation, notice, or change of screen.
+6. **Given** the phone is registered and the staging backend is configured for delivery, **When** the backend creates an introduction-ready event for the member, **Then** the phone displays a notification titled "A new introduction is ready" whose body names no one.
+7. **Given** the explanation is showing, **When** the member chooses "Not now", **Then** no phone dialog appears, no registration is created, the explanation does not return on its own for this member on this phone, including after signing out and signing back in, and the "Notifications" row in Profile remains the way to turn notifications on later.
+8. **Given** the member chose "Not now" and the phone has therefore never been asked, **When** they tap the Profile "Notifications" row, **Then** the phone's own permission dialog appears (the app has no page in iPhone Settings until it has asked once), and allowing it registers the phone exactly as in scenario 5.
+9. **Given** the member chose "Turn on notifications" and then declined in the phone's dialog, **When** the phone's dialog closes, **Then** no registration is created, no error or follow-up appears, the app never asks again on its own, and from then on the Profile "Notifications" row opens the app's page in iPhone Settings.
+10. **Given** a signed-in member with onboarding complete, permission allowed, and a registered phone, **When** the app becomes active, **Then** the member's account holds a registration for the phone's current delivery address whose last-confirmed time is no earlier than this activation, with no visible effect.
+11. **Given** the member allowed notifications while the phone was offline, **When** the phone regains connectivity or the app next becomes active with connectivity, **Then** registration completes without the member doing anything and without any error having been shown in between.
+12. **Given** a returning member with an active membership signs in on a phone that has never been asked and on which they have not chosen "Not now", **When** Today first appears in its searching or private-waiting state, **Then** the same single explanation appears once for them.
+13. **Given** the explanation is showing, **When** the member switches to Profile and returns to Today, backgrounds and reopens the app, or relaunches it, **Then** the explanation is still showing on Today with both choices, no choice has been recorded, and no phone dialog has appeared.
+14. **Given** a member who chose "Not now" signs out and signs back in on the same phone, **When** Today appears, **Then** the explanation does not appear.
+15. **Given** the conditions for the explanation are first met while Today shows an undecided introduction or a mutual-interest action, **When** Today is shown, **Then** the explanation does not appear alongside it, and it appears the first time Today is shown in its searching or private-waiting state.
+16. **Given** member A signed out on a phone where notifications for the app are already allowed, **When** member B signs in with onboarding complete and the app becomes active, **Then** the phone's registration belongs to B alone, no explanation is shown to B, and no notification for A reaches the phone.
+17. **Given** a registered phone, **When** the member signs out while online, **Then** the registration for this phone is removed before the session ends, sign-out completes within 5 seconds, and no later notification for that account reaches this phone.
+18. **Given** a registered phone, **When** the member signs out while offline, or the removal is not confirmed within 5 seconds, **Then** sign-out still completes, the app forgets this phone's registration from then on, and the next member to sign in and allow notifications on this phone takes over its delivery address so the previous member's notifications no longer reach it.
+19. **Given** a registered phone, **When** the member deletes their account and the backend confirms the deletion, **Then** no registration for that account remains anywhere, no notification for it is ever delivered again, and the app clears its local notification memory only after that confirmation.
+20. **Given** member A is signed in on two phones, **When** A signs out on one of them, **Then** the other phone keeps receiving notifications.
 
 ---
 
-### User Story 3 - [Brief Title] (Priority: P3)
+### User Story 2 - Tapping a Notification Opens the Right Screen (Priority: P2)
 
-[Describe this user journey in plain language]
+When a member taps one of the five notification kinds on the lock screen, in the phone's notification list, or as a banner, the app opens directly to the screen where the action lives: Today for an introduction that is ready; Messages, showing the referenced conversation itself, for mutual interest, a new message, a meeting reminder, or feedback due. This holds whether the app was already open, suspended in the background, or not running at all, and whether or not the phone is online at that moment. A tap only navigates, exactly as if the member had switched tabs by hand. It never records a decision, marks something as read before the member actually sees it, or reveals anything the screen would not already show.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: Each notification asks for one specific action in one specific place. Landing on the wrong screen turns a two-second action into a hunt. It follows registration because the notifications are already useful without it: the app simply opens where it last was.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: With a registered phone and the configured staging backend, have the backend create one event of each kind. Tap each notification with the app in the foreground, in the background, and fully closed, and confirm the app lands on the defined destination showing the referenced item, with the session restored and the data refreshed first. Repeat one cold launch with the phone offline and confirm the destination still appears in its last known state.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** the app is not running and the member's session is still valid, **When** the member taps an introduction-ready notification, **Then** the app launches, restores the session, refreshes its data, and shows Today with the introduction, with no screen other than the launch screen and the same loading state shown on any launch; in particular never the sign-in screen, onboarding, or another tab's content before the destination.
+2. **Given** the app is suspended in the background with the member last on Profile, **When** they tap a mutual-interest notification, **Then** the app comes forward on Messages showing the conversation screen that just opened.
+3. **Given** the app is open on Today, **When** the member taps a new-message banner, **Then** the app switches to Messages showing the referenced conversation screen, and the message is marked read only once the conversation is actually on screen.
+4. **Given** the app is in any state (foreground, background, or not running), **When** the member taps a meeting-reminder notification, **Then** Messages shows the referenced conversation screen with its meeting details.
+5. **Given** a feedback-due notification is showing, **When** the member taps it, **Then** Messages shows the referenced conversation screen with the private feedback prompt, and no feedback outcome is recorded by the tap itself.
+6. **Given** the member's session can no longer be restored, **When** they tap any notification, **Then** the app shows the sign-in screen, discards the destination, lands on Today after sign-in as usual, and displays nothing from the notification inside the app.
+7. **Given** the introduction referenced by a notification has since expired, or the member has already responded to it, **When** the notification is tapped, **Then** Today shows its current state (for example, private waiting or looking for someone worthwhile) with no error, and the tap neither reopens nor re-decides the introduction.
+8. **Given** the referenced conversation has ended, or the other member has been blocked, **When** the notification is tapped, **Then** Messages shows its current state with no error and does not reopen the ended conversation.
+9. **Given** a different member is now signed in on the phone than the one the notification was for, **When** it is tapped, **Then** the app shows only the signed-in member's own state and reveals nothing about the other account.
+10. **Given** several notifications are waiting in the phone's list, **When** the member taps one, **Then** only that one determines the destination.
+11. **Given** the app is closed, **When** two new-message notifications for the same conversation arrive, **Then** the phone's list shows one entry for that conversation carrying the newer text, because the app has not interfered with the replacement the backend requests.
+12. **Given** a mutual-interest notification and a later new-message notification for the same conversation are in the phone's list, **When** the member views the list, **Then** they appear grouped together under that conversation.
+13. **Given** the app is not running and the phone is offline, **When** the member taps any notification, **Then** the app launches, restores the session from its local copy, shows the destination tab with its last known state and the app's standard offline state, shows no error about the notification, and updates the screen in place when the refresh completes after connectivity returns.
+14. **Given** the member is editing their profile with unsaved changes, **When** they tap a new-message banner, **Then** Messages shows the conversation screen and the edit behaves exactly as it would after a manual tab switch, with no additional confirmation.
 
 ---
 
-[Add more user stories as needed, each with an assigned priority]
+### User Story 3 - Calm Behaviour When a Notification Arrives While the App Is Open (Priority: P3)
+
+While the app is open, an arriving notification behaves like a quiet update rather than an interruption. If the member is already on the destination screen for that notification, no banner appears and the screen simply updates. Anywhere else in the app, the phone's standard banner appears once, exactly as it would outside the app, and tapping it navigates as in User Story 2. The app adds no pop-ups, toasts, sounds, or animation of its own, never steals focus from what the member is typing, never counts a notification in a badge unless it is actionable and unread, and shows no notice of its own even when the refresh a notification triggers cannot complete. When the member views a conversation or the current introduction, notifications about that item that are still sitting in the phone's list are removed, so nothing stale is left behind.
+
+**Why this priority**: Calm is a stated product principle. A notification that interrupts the very conversation it is about, or that is doubled by an in-app alert, breaks it. It is ordered after routing because nothing is lost if the phone's default banner shows in the meantime.
+
+**Independent Test**: With the app open on each screen in turn and the configured staging backend, have the backend create each kind of event and observe: banner suppressed on the destination screen with the content updated in place; the standard banner once everywhere else; no in-app notice of the app's own, including with the phone offline; badges unchanged except for the unread mutual-only conversation; notifications about a viewed item cleared from the phone's list.
+
+**Acceptance Scenarios**:
+
+1. **Given** the member is viewing the conversation, **When** a new-message notification for that conversation arrives, **Then** no banner or sound is presented, the message appears in the conversation, and the composer keeps its focus and any draft.
+2. **Given** the member is on Today, **When** an introduction-ready notification arrives, **Then** no banner is presented and Today shows the introduction once its data has refreshed.
+3. **Given** the member is on Connections, **When** a new-message notification arrives, **Then** the phone's standard banner appears once, the Messages tab badge reflects the unread conversation, and nothing else on screen changes.
+4. **Given** the member is on Profile, **When** a mutual-interest notification arrives, **Then** the standard banner appears once and Today and Messages reflect the new conversation the next time they are shown.
+5. **Given** the member is in the referenced conversation, **When** a meeting reminder or feedback-due notification arrives, **Then** no banner is presented and the conversation shows the meeting details or the feedback prompt in place.
+6. **Given** a notification has already been shown once, **When** the backend delivers the same notification a second time (the same kind and the same identifiers, produced in test by delivering one event twice), **Then** the member sees at most one banner and badges are not double counted.
+7. **Given** the member has a sheet open or is mid-edit anywhere in the app, **When** any notification arrives, **Then** the sheet stays open, the edit is preserved, and focus does not move.
+8. **Given** notifications about a conversation are still in the phone's notification list, **When** the member opens that conversation, **Then** they are removed from the list.
+9. **Given** an introduction-ready notification is still in the phone's list, **When** the member opens Today and the introduction is on screen, **Then** that notification is removed from the list.
+10. **Given** the member is on Today in private waiting, **When** a mutual-interest notification arrives, **Then** the phone's standard banner appears once (Messages is the destination, not Today), Today updates in place to its mutual-interest state within 3 seconds of the refresh succeeding, and tapping the banner opens the conversation screen in Messages.
+11. **Given** the app is open on Connections and the phone is offline, **When** a new-message notification arrives, **Then** the phone's standard banner appears once, the app shows no notice, error, or offline message of its own, and Messages updates the next time a refresh succeeds.
+
+---
+
+### User Story 4 - Preferences Stay in iPhone Settings (Priority: P4)
+
+The app never offers delivery toggles of its own. Once the phone has been asked, the "Notifications" row in Profile opens the app's page in iPhone Settings, and whatever the member changes there is honoured by the phone itself, immediately and with no app involvement: the app keeps the phone registered and the phone decides whether to display each notification. If the phone cannot open that page, the row explains once, quietly, where notifications are managed.
+
+**Why this priority**: The Profile row already exists and opens iPhone Settings; this story only confirms it and its fallback and adds no controls of its own.
+
+**Independent Test**: On a phone that has been asked, tap the Profile "Notifications" row and confirm the app's page in iPhone Settings opens and the app offers no toggles. Turn notifications off there and back on without opening the app, have the backend create an event, and confirm the phone displays it. With the Settings page unavailable, tap the row and confirm the single quiet notice.
+
+**Acceptance Scenarios**:
+
+1. **Given** the phone has been asked for permission at some point, **When** the member taps the Profile "Notifications" row, **Then** the app's own page in iPhone Settings opens, and the app offers no per-kind toggles, quiet hours, sound choices, or pause controls of its own.
+2. **Given** the app's page in iPhone Settings cannot be opened, **When** the member taps the Profile "Notifications" row, **Then** the app shows once, through its single notice channel, "Notifications are managed in iPhone Settings under network.to", offers no toggle of its own, and nothing else changes.
+3. **Given** a registered phone, **When** the member turns notifications off for the app in iPhone Settings, **Then** the phone displays nothing for the app, the app shows no message about it, and the registration is left in place.
+4. **Given** a registered phone whose notifications were turned off in iPhone Settings, **When** the member turns them back on without opening the app and the backend then creates an event, **Then** the phone displays the notification with no app involvement.
+
+---
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- **Permission declined in the phone's dialog**: no registration is created; the app shows nothing, never asks again on its own, and the Profile row opens iPhone Settings where the member can change their mind.
+- **Permission changed later in iPhone Settings**: the phone alone decides whether to display a notification. The app keeps the registration and does nothing; turning notifications back on resumes delivery immediately with no app involvement.
+- **Shared phone already asked**: the phone's permission decision belongs to the phone, not the member. A member signing in after another member allowed is registered silently and sees no explanation, even if they chose "Not now" on this phone while it was never asked; a member signing in after another member declined sees nothing and can use the Profile row, which opens iPhone Settings.
+- **The phone's delivery address changes** (after a restore from backup, an operating-system update, or a reinstall): the app registers the new address and, when it still remembers the address it previously registered for this member on this phone, removes that previous one; when it does not (for example, after a reinstall), the stale address is retired by the existing backend behaviour when the phone reports it gone.
+- **Multiple phones per member**: each phone is registered independently and every registered phone receives every notification; signing out on one phone never affects another.
+- **Same member signed in on a new phone**: the new phone is asked once (if it has never been asked) and registered alongside the old one; the old phone keeps receiving until the member signs out there or the phone reports the app is gone.
+- **Different member signs in on the same phone**: the phone's delivery address is reassigned to the newly signed-in member; the previous member's notifications stop reaching this phone even if their sign-out could not be confirmed while offline.
+- **Reinstalling the app**: the phone remembers its permission decision at the phone level. If it was allowed, the member is registered silently on sign-in and the stale address is retired by the backend when the phone reports it. If it was declined, nothing is shown. A member who had chosen "Not now" sees the explanation once more after a reinstall, because the phone has still never been asked and the app's memory is gone; this is accepted. The free month does not restart on reinstall (existing rule).
+- **Returning member whose membership has lapsed signs in on a never-asked phone**: no explanation appears, because they cannot receive introductions. The Profile "Notifications" row presents the phone's dialog; if they allow, the phone is registered and messages, meeting reminders, and feedback for existing conversations arrive and route normally.
+- **Introduction has expired or already been decided when the notification is tapped**: Today shows its current state with no error; the tap cannot reopen or re-decide anything.
+- **Conversation has ended or the other member was blocked after the event was queued**: an arriving notification about an ended or blocked conversation produces no in-app change beyond the normal refresh, adds nothing to any badge, and tapping it lands on Messages' current state without reopening the conversation. The notification text itself carries at most the first name that was already known to the member before the block.
+- **Cold launch from a notification**: the app restores the session and refreshes its data before navigating; if the session cannot be restored the destination is discarded and the sign-in screen is shown; if onboarding is somehow incomplete for the signed-in member, onboarding is shown and the destination is discarded.
+- **Cold launch from a notification while offline**: the app restores the session from its local copy, shows the destination tab in its last known state with the app's standard offline state, shows no error about the notification, and updates in place when the refresh completes after connectivity returns.
+- **Offline at the moment of permission or registration**: the phone's dialog works without connectivity; nothing is shown; registration is queued and completed the next time the app becomes active with connectivity, and no member action is ever blocked on it.
+- **Sign-out while offline**: sign-out completes anyway and the app forgets the registration. The stale registration remains until this phone is registered by another member, the same member signs in again on it, or the backend retires the address; there is no upper bound, because removal needs a signed-in session. A notification that still reaches this phone in the meantime is shown by the phone with its usual scarce copy, and tapping it opens the sign-in screen with nothing revealed inside the app.
+- **Membership expired**: no new introduction-ready notifications are created (no new introductions are generated while membership is lapsed), but messages, meeting reminders, and feedback for existing conversations continue to arrive and route normally.
+- **Backend gives up after its eighth delivery attempt**: the member still sees the introduction, message, or prompt the next time they open the app, because foreground refresh remains the recovery path; the app must not assume every event arrives as a notification.
+- **Unknown notification kind or malformed content**: the app ignores it for routing and never displays anything of its own; it must not crash or show an error.
+- **Notification arrives while the app is on the sign-in or onboarding screens** (for example, a stale one for a previously signed-in member): the phone shows it; tapping it does nothing beyond what those screens already show.
+- **Delivery channels and demonstration mode**: a build installed directly from a development tool registers on the developer channel; a build installed through TestFlight or the App Store registers on the live channel. When the app is running in its demonstration mode on sample data rather than against a real member account, it registers nothing with the product's servers.
+- **Focus modes, Do Not Disturb, notification summaries, and lock-screen privacy**: handled entirely by the phone; the app neither detects nor works around them.
+- **Accessibility**: the explanation card is the first element VoiceOver reaches on Today while it is showing, is announced with a label and hint on each choice, scales through the largest Dynamic Type sizes without truncation, fits a 320 pt wide layout, uses no animation, and pairs colour with text.
 
 ## Requirements *(mandatory)*
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+**Asking for permission**
 
-*Example of marking unclear requirements:*
+- **FR-001**: The app MUST NOT present the phone's notification permission dialog, or any in-app explanation leading to it, on first launch, on any sign-in or verification screen, or during any onboarding step.
+- **FR-002**: The app MUST show its notification explanation only when all of the following hold: a member is signed in, their onboarding is complete, they can receive introductions (an active free month or a verified subscription), the phone's permission state for this app is "never asked", and this member has not chosen "Not now" on this phone. The explanation is a card at the top of Today, above Today's own content, not a pop-up or a sheet; Today stays fully usable while it is showing and nothing is modal. It first appears only while Today shows no introduction to decide and no other next action (Today's searching or private-waiting state); if Today has an undecided introduction or a mutual-interest action when the conditions are first met, the explanation waits and appears the first time Today is shown in such a state, so Today never presents an introduction and a second call to action together. Once showing, it MUST remain until the member chooses one of the two options: switching tabs, backgrounding, relaunching, or losing connectivity MUST NOT dismiss it and MUST NOT count as "Not now". "At most once" means shown until answered, then never again for that member on this phone. If the phone's permission state stops being "never asked" for another reason while the card is showing (for example, the member used the Profile "Notifications" row), the card is dismissed without recording "Not now". When a member signs in on a phone whose permission is already "allowed" (for example, a previous member or a previous install allowed it), the app MUST register the phone silently as soon as the conditions in FR-007 hold and MUST NOT show the explanation. When it is already "declined", the app MUST show nothing; the Profile "Notifications" row opens iPhone Settings.
+- **FR-003**: The explanation MUST name the five reasons for a notification, state that delivery is managed in iPhone Settings, and offer exactly two text-labeled choices, "Turn on notifications" and "Not now", with equal accessible hit areas of at least 44 x 44 pt. It MUST NOT use countdowns, animation, urgency, or persuasion beyond the plain explanation. Proposed copy: "**When network.to will notify you** We'll notify you only when an introduction is ready, when interest is mutual, when you receive a message, before a meeting, and when private feedback is due. You can change this anytime in iPhone Settings."
+- **FR-004**: Choosing "Turn on notifications" MUST present the phone's own permission dialog. Choosing "Not now" MUST NOT present it, MUST be remembered on this phone for this member across sign-out and sign-in, and MUST NOT be followed by any further in-app ask. This memory is cleared only after the backend confirms account deletion, and is lost with the app if the app is removed from the phone. Leaving Today, switching tabs, or backgrounding the app without choosing is not a choice: the card is shown again the next time Today appears until the member chooses, and only a choice counts. The Profile "Notifications" row MUST present the phone's permission dialog while the phone has never been asked; this is the only path back after "Not now" and ships with User Story 1.
+- **FR-005**: The app MUST ask only for the phone's ordinary notification permission to show alerts and play the system sound. It MUST NOT ask for permission to show a number on the app icon (none is ever shown), MUST NOT ask for any option that lets notifications appear before the member has explicitly allowed them, and MUST NOT ask for any option that lets a notification break through Focus or Do Not Disturb.
+- **FR-006**: The explanation MUST implement the state matrix: resting (card visible with both choices), in progress (phone dialog open), success (allowed; card dismissed with no confirmation), recoverable failure (registration failed; nothing shown, retried silently on the next activation with connectivity), terminal (declined or "Not now"; card dismissed), and offline (the phone's dialog works without connectivity; if the member allowed, the app records that registration is queued and completes it the next time it becomes active with connectivity). The offline and recoverable-failure states are deliberately invisible: the member's own action, allowing notifications, completed on the phone itself, and registration is a background step that no member action waits on, so no saved, queued, or not-submitted notice is shown (Principle VIII, fail quietly; recorded under Assumptions as a deviation from the offline-state wording rule).
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+**Registering the phone**
+
+- **FR-007**: When the phone's permission is allowed and a member with complete onboarding is signed in, the app MUST obtain the phone's delivery address for this app and register it with the member's account, recording which delivery channel this phone uses: the developer channel for a build installed directly from a development tool, or the live channel for a build installed through TestFlight or the App Store. It MUST do this immediately after the permission decision, immediately when these conditions first become true (for example, on sign-in or onboarding completion on a phone where permission is already allowed), and again on every activation while permission is allowed, so the registration's last-confirmed time is refreshed.
+- **FR-008**: Registration MUST be silent. The app MUST NOT show a confirmation on success or an error on failure, MUST retry a failed registration the next time the app becomes active with connectivity, and MUST NOT block or delay any other member action on it.
+- **FR-009**: When the phone issues a new delivery address, the app MUST register it and, when it still holds the address it previously registered for this member on this phone, remove that previous address. When it does not (for example, after a reinstall), the stale address is retired by the existing backend behaviour when the phone reports it gone.
+- **FR-010**: Each phone a member uses MUST be registered independently; registering one phone MUST NOT remove another.
+- **FR-011**: The app MUST NOT register a phone while no member is signed in, while the signed-in member's onboarding is incomplete, or when the app is running in its demonstration mode on sample data rather than against a real member account; in that mode it MUST NOT register anything with the product's servers.
+- **FR-012**: Sign-out MUST remove this phone's registration before ending the session, waiting at most 5 seconds for the removal to be confirmed. On timeout, failure, or no connectivity, sign-out MUST still complete and the app MUST forget this phone's registration (treat the phone as unregistered) thereafter.
+- **FR-013**: After account deletion is confirmed by the backend, no registration for the account may remain (the existing server-side deletion already removes them), and the app MUST clear its local notification memory (last registered address, "Not now" choice) only after that confirmation.
+- **FR-014**: When a member registers a phone whose delivery address was previously registered to a different member, the address MUST belong to the newly signed-in member only (existing backend behaviour, which the app MUST rely on rather than duplicate).
+
+**Delivering the five kinds**
+
+- **FR-015**: The app MUST handle exactly the five kinds: introduction ready, mutual interest, new message, meeting reminder, and feedback due. It MUST ignore any kind it does not recognise and MUST NOT add kinds, local reminders, streak, inactivity, "come back", or re-engagement notifications of any sort.
+- **FR-016**: The text shown on the phone MUST be exactly the copy the backend defines for each kind, in the first-name or nameless variant the backend chose. The app MUST NOT rewrite, enrich, or append to it, MUST NOT fetch message text or profile details for display in a notification, and MUST NOT name anyone for a pending introduction.
+- **FR-017**: The app MUST NOT interfere with the grouping and replacement the backend already requests for notifications about the same conversation or item, and MUST NOT add grouping, summaries, or ordering of its own.
+
+**Opening the right screen**
+
+- **FR-018**: Tapping an introduction-ready notification MUST open Today showing the introduction. Tapping a mutual-interest, new-message, meeting-reminder, or feedback-due notification MUST open Messages showing the referenced conversation. "Showing the referenced conversation" means the conversation screen itself is on screen (context strip, messages, and composer, or the meeting details or feedback prompt where applicable), not the conversation list. A tap navigates as if the member had switched tabs manually: sheets are dismissed and unsaved edits are preserved or discarded exactly as they are on a manual tab switch today; no additional confirmation is added.
+- **FR-019**: Routing MUST work when the app is in the foreground, suspended in the background, or not running. When not running, the app MUST restore the session and refresh its data before showing the destination, and MUST NOT show any screen other than the launch screen and the same loading state shown on any launch. When the refresh cannot complete (for example, offline), the app MUST still show the destination tab with its last known state and the app's standard offline state, MUST NOT wait on the refresh, and MUST update in place when a later refresh succeeds.
+- **FR-020**: A tap MUST never record Interested or Pass, send a message, submit feedback, change a preference, or mark a message read before the conversation is actually on screen.
+- **FR-021**: If the referenced item is not present in the signed-in member's refreshed state (expired, already decided, ended, blocked, or belonging to another account), the app MUST show the destination tab's current state with no error and MUST NOT display any detail from the notification inside the app.
+- **FR-022**: If no member is signed in or the session cannot be restored, the app MUST show the sign-in screen, discard the destination, and land on Today after sign-in. If onboarding is incomplete, onboarding MUST be shown and the destination discarded.
+- **FR-023**: Routing MUST rely only on the identifiers carried by the notification and the member's own refreshed data. The app MUST NOT create or alter an introduction, conversation, or meeting locally because a notification arrived.
+
+**Behaving calmly while the app is open**
+
+- **FR-024**: When a notification arrives while the app is in the foreground, the app MUST refresh its state from the backend so the relevant screen updates. Live in-app updates remain an enhancement; the refresh is the guarantee. A refresh triggered by a notification arrival that fails MUST produce no notice of any kind; the next activation or member-initiated refresh remains the recovery path.
+- **FR-025**: If the member is viewing the destination (the referenced conversation screen, or Today for an introduction), the app MUST suppress the phone's banner and sound and update the content in place. Otherwise, including Today while a mutual-interest notification arrives (its destination is Messages), the app MUST let the phone present its standard banner exactly once.
+- **FR-026**: The app MUST NOT add its own pop-up, toast, alert, sound, haptic, or animation for an arriving notification, and MUST NOT move focus, dismiss a sheet, or discard a draft because one arrived.
+- **FR-027**: Redelivery of the same notification (two deliveries carrying the same kind and the same identifiers) MUST produce at most one visible banner and MUST NOT double count any badge.
+- **FR-028**: Tab badges MUST continue to count only actionable unread items, as they do now: the Messages tab counts unread conversations, which exist only after mutual interest. This feature MUST NOT add a badge to Today, Connections, or Profile, MUST NOT introduce a number badge on the app icon, and MUST NOT add a notification centre inside the app.
+- **FR-029**: When the member views a conversation or the current introduction, the app MUST remove notifications about that item that are still in the phone's notification list.
+
+**Keeping preferences in iPhone Settings**
+
+- **FR-030**: The app MUST NOT provide in-app delivery controls of any kind. The Profile "Notifications" row MUST open the app's own page in iPhone Settings when the phone has been asked at least once, MUST present the phone's permission dialog when it never has (FR-004), and when that page cannot be opened MUST show once, through the app's single notice channel, "Notifications are managed in iPhone Settings under network.to" and leave the row unchanged.
+- **FR-031**: The app MUST NOT remove or alter a registration because the member changed notification permission for the app in iPhone Settings; the phone alone decides whether to display each notification, and turning notifications back on resumes delivery with no app involvement.
+- **FR-032**: This feature MUST NOT cause a notification to be sent for a Pass, a non-mutual outcome, a report, a block, or an ended conversation, and the app MUST NOT reveal a member's permission status or registration state to any other member.
+
+**Quality and vocabulary**
+
+- **FR-033**: Every surface this feature adds or touches MUST meet the accessibility contract: VoiceOver label, hint, and value, with the explanation card first in Today's reading order while it is showing; Dynamic Type through the largest accessibility sizes; 44 x 44 pt targets; WCAG AA contrast in light and dark; Reduce Motion and Reduce Transparency honoured; colour never the sole indicator; layout intact at 320 pt.
+- **FR-034**: All member-facing copy MUST use the canonical vocabulary (Introduction, Interested, Pass, Connection, Meet, Available today, Verified company, member) and MUST NOT use match, compatibility, score, like, swipe, deck, nearby people, streak, AI-powered, romantic language, or artificial urgency.
 
 ### Key Entities *(include if feature involves data)*
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+- **Notification**: one message pushed to a phone. Has a kind (one of the five), the identifiers of what it refers to (an introduction, a conversation, and/or a meeting), and the fixed title and body for its kind, in a first-name or nameless variant. Carries the other member's first name only where a mutual relationship already exists, never a message body, never a Pass. The backend already asks the phone to group it with other notifications about the same conversation and to replace an older one about the same item; the app leaves that alone.
+- **Phone registration**: the link between a member's account and one phone's delivery address for this app, together with which delivery channel the phone uses (developer or live) and when it was last confirmed. One registration per address; an address belongs to exactly one member at a time. Removed on sign-out, when the phone reports the app is no longer installed, or with the account. Already exists server-side; this feature adds nothing to it.
+- **Permission state**: the phone's own record for this app of never asked, allowed, or declined, changeable only through the phone's dialog and iPhone Settings. The app reads it and never stores its own copy as truth; it remembers only, per member on this phone, the member's "Not now" choice and the last address it registered.
+- **Destination**: where a tapped notification leads, derived from its kind and identifiers: Today with the introduction, or Messages with the referenced conversation screen. Resolved against the member's freshly loaded data when it can be loaded, and against the last known state when it cannot; never trusted from the notification alone.
+- **Member session**: whether a member is signed in, whether their onboarding is complete, and whether they can currently receive introductions. Gates asking, registering, and routing.
 
 ## Success Criteria *(mandatory)*
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: In fresh-install tests, the notification explanation and the phone's permission dialog appear zero times before onboarding completion; after it, exactly one explanation card is shown (persisting until answered) and the phone's dialog appears at most once, in 100% of runs.
+- **SC-002**: A phone that is online is registered within 60 seconds of the member allowing notifications; a phone that was offline is registered within 60 seconds of the app next becoming active with connectivity.
+- **SC-003**: For each of the five kinds and each of the three app states (foreground, background, not running), tapping the notification lands on the defined destination showing the referenced item in 100% of trials, and within 5 seconds of the tap on a connection of at least 5 Mbps with at most 150 ms round-trip latency when the app was not running.
+- **SC-004**: After a sign-out completed with connectivity, or a confirmed account deletion, zero notifications for that account are displayed on the phone in a test that creates every kind of event afterwards.
+- **SC-005**: Across the full test suite, zero notifications displayed on any phone contain message text, a Pass or non-mutual outcome, or the name of a member with whom the recipient has no mutual relationship.
+- **SC-006**: When a notification arrives while the member is on its destination screen, zero banners appear and the updated content is visible within 3 seconds of the refresh succeeding; when it arrives elsewhere in the app, exactly one banner appears and the app adds zero notices of its own, online or offline.
+- **SC-007**: Redelivered notifications produce at most one banner and no badge inflation in 100% of redelivery tests.
+- **SC-008**: Registration failures, and refreshes triggered by an arriving notification that fail, produce zero member-visible errors or notices and zero blocked or delayed member actions, and every registration failure recovers on the next activation with connectivity.
+- **SC-009**: The app contains zero in-app delivery controls, and the Profile "Notifications" row reaches the app's iPhone Settings page (or the phone's dialog when never asked, or the single quiet notice when the page cannot be opened) in 100% of trials.
+- **SC-010**: The explanation passes every native accessibility gate in the accessibility review (VoiceOver order and labels, largest Dynamic Type, Reduce Motion, Increased Contrast, 320 pt layout) before merge.
+- **SC-011** (launch monitoring target, observed after release rather than tested before it): at least 60% of members who completed onboarding in the previous 30 days hold at least one registered phone at the time of measurement, computed from the existing registration and membership records the backend already stores. No opt-out or permission-state metric is set, because a removed registration carries no reason and adding one would be new operational data.
+- **SC-012**: Sign-out completes within 5 seconds in 100% of trials, with or without connectivity.
 
 ## Assumptions
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right assumptions based on reasonable defaults
-  chosen when the feature description did not specify certain details.
--->
+- The backend behaviour described in the Notifications section of the backend documentation is complete and unchanged: events are created only server-side for the five kinds, copy is fixed per kind, delivery retries with back-off and stops after eight attempts, only members with a registered phone are attempted, and addresses the phone reports as gone are retired. The backend already groups notifications about the same conversation and replaces an older notification about the same item with a newer one; this feature relies on that and adds nothing. This feature adds no backend behaviour beyond calling the existing registration and removal operations.
+- Dependency: end-to-end delivery depends on operator steps outside this feature that are not yet complete: the Apple push key and its identifiers stored as backend secrets, the scheduled dispatcher's Vault and job secrets, and the app's push entitlement on the developer account, configured in staging before production. Until they exist, registration succeeds but the backend records a "not configured" failure for every claimed event, which the operations alert surfaces. Scenarios that end at the phone's lock screen (User Story 1 scenarios 6, 16, 17, 18, and 20; all of User Stories 2 and 3; User Story 4 scenarios 3 and 4; SC-003 to SC-007) are verified against a staging backend that has these secrets; every other scenario is verifiable without them.
+- The existing registration operation reassigns an address to whichever member registers it, so a shared or second-hand phone always delivers to the member currently signed in. The spec relies on this rather than adding a separate "take over" step.
+- "Can receive introductions" means the member holds an active free month or a verified subscription, which is always true at the moment onboarding completes because the free month begins then. A returning member whose membership has lapsed is not asked on a new phone but can turn notifications on from the Profile row.
+- The explanation is shown once per member per phone, until answered. The "Not now" choice survives sign-out and sign-in of the same member on the same phone and is cleared only after confirmed account deletion (it is lost with the app if the app is removed). After "Not now", the Profile row is the only path back. Asking again at a later meaningful moment, or treating a fresh sign-in as a new chance to ask, was considered and rejected as a form of re-engagement pressure.
+- The explanation exists to precede the phone's one permission dialog, not to act as a second consent layer. On a phone whose permission is already allowed (by a previous member or a previous install), a signed-in member with complete onboarding is registered silently and sees no explanation, because delivery preferences live in iPhone Settings and the phone's state is what the member can see and change there. The alternative, showing the explanation once per member per install and registering only after "Turn on notifications", was rejected as a second preference layer outside iPhone Settings.
+- Registration does not follow later changes in iPhone Settings. The phone alone decides whether to display a notification, so the app keeps the registration when notifications are turned off there and does nothing when they are turned back on; delivery resumes immediately with no app involvement. Removing and restoring the registration on each activation was considered and rejected: it would delay delivery until the member next opened the app, and its benefit (fewer wasted delivery attempts) is operational hygiene already bounded by the backend's eight-attempt cap and address retirement.
+- Proactive removal of a superseded delivery address (FR-009) is a courtesy to the delivery pipeline; the backend's retirement of dead addresses remains the guarantee. The app must remember the last address it registered anyway, because sign-out removal needs it, so the courtesy adds no new memory.
+- Sign-out waits at most 5 seconds for the removal to be confirmed: long enough for a normal request, short enough that sign-out never feels stuck. Sign-out while offline or after that timeout leaves a registration behind until this phone is registered by another member, the same member signs in again on it, or the backend retires the address; there is no upper bound, because removal needs a signed-in session. This is accepted because the phone shows only the scarce fixed copy, the app reveals nothing after a tap, and the next member to register the phone takes over its address. Blocking sign-out until the removal succeeds was rejected as worse for the member.
+- The offline and failure states of the explanation show nothing because the member's action (the permission answer) is saved on the phone itself; registration is invisible bookkeeping with no member-facing outcome. This is a recorded deviation from the offline-state wording rule (say whether an action was saved, queued, or not submitted), by Principle VIII.
+- Removing notifications from the phone's list when the member views the conversation or the current introduction is a required behaviour (FR-029) rather than a courtesy, because it is deterministic, cheap, and removes stale attention from the periphery. Leaving it as a should-do was considered; it would have left an acceptance scenario without a firm requirement behind it.
+- No number badge is shown on the app icon and no permission for one is requested: the backend sends no count, and the constitution limits badges to actionable unread items inside the app. Adding one later is a separate decision.
+- The explanation's heading is neutral ("When network.to will notify you") rather than persuasive, because the copy must inform without urgency; the body sentences state exactly what the product does.
+- Session restoration, foreground refresh, the app's single notice channel, and the existing "Notifications: Managed in iPhone Settings" row in Profile are reused; the four-tab navigation is unchanged and no notification centre is added.
+- TestFlight and App Store installs use the live delivery channel; only direct developer installs use the developer channel. The backend accepts exactly these two channels and rejects anything else. When the app is running in its demonstration mode on sample data rather than against a real member account, it never contacts the product's servers for registration.
 
-- [Assumption about target users, e.g., "Users have stable internet connectivity"]
-- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
-- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
-- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+**Out of scope**
+
+- Any new notification kind, including onboarding nudges, inactivity or streak reminders, subscription or free-month expiry notices, and Available today prompts (adding a kind requires a constitution amendment).
+- Marketing, promotional, product-announcement, "what's new", survey, or referral notifications of any kind, whether pushed by the backend or scheduled on the phone.
+- Rich notifications with images, photos, or quick actions such as replying, choosing Interested, or submitting feedback from the notification itself.
+- In-app delivery preferences, per-kind toggles, quiet hours, sound choices, or a notification history screen.
+- Quiet, provisional, time-sensitive, or critical delivery levels.
+- Changes to who gets notified, when, or with what copy; all of that remains server-side and unchanged.
+- Silent background refresh pushed by the backend.
+- Reporting permission state, opt-in, or opt-out to the backend; no telemetry is added.
+- Other Apple surfaces: Apple Watch mirroring, widgets, Live Activities, and iPad or Mac builds; this feature specifies the iPhone app only.
+
+### Constitution Check
+
+- **Principles touched**: I (four tabs unchanged, no notification centre, badges count only actionable unread items, the explanation never sits beside an undecided introduction, no engagement content), II (mutual interest is notified only after both members chose Interested; a Pass never notifies; a pending introduction stays anonymous; a tap never records a decision), III (meeting reminders and feedback-due notifications serve the in-person outcome; feedback stays private), IV (exactly the five kinds, no streak or re-engagement use, preferences in iPhone Settings, payloads limited to identifiers, the counterpart's first name only where a relationship exists, and the fixed copy; message bodies never pushed; blocks honoured; delivery stops on sign-out with connectivity and on account deletion; an offline sign-out leaves only the fixed copy reachable and nothing readable in the app), V (native permission dialog and native banner behaviour, single source of rendered state, foreground refresh as the recovery path, the single notice channel, canonical vocabulary, accessibility contract, no looping or urgency animation, the state matrix including a named offline state with its silent deviation recorded), VI (events and delivery bookkeeping stay server-side; the app only calls the existing registration and removal operations, which already enforce authentication and input bounds), VII (every asking, registering, removing, routing, and suppression rule ships with deterministic tests), VIII (one explanation shown once and never repeated on the app's own initiative; the phone's own dialog, banner, sound, grouping, Settings page, and Focus modes are used as they are; no in-app notice, sound, or animation; every failure is silent and foreground refresh remains the recovery path).
+- **One-sided decisions**: this feature reveals nothing to the other member. A notification is sent only to the member it concerns; the mutual-interest notification exists only after both chose Interested; a Pass, a block, a report, and an ended conversation produce no notification; a tap discloses nothing beyond the signed-in member's own refreshed state; a member's permission status and registration state are never visible to anyone else.
+- **Retention**: no new operational data. Phone registrations already exist server-side and are removed on sign-out, when the phone reports the app is gone, or by cascade on account deletion. Notification events keep their existing 90-day purge. The only new client-side memory is, per member on this phone, the member's "Not now" choice (kept across sign-out, cleared only after confirmed account deletion, lost with the app if it is removed) and the last address registered (cleared on sign-out and after confirmed deletion). No permission-state or opt-out data is reported to the backend.
+- **Refused surfaces**: none admitted. No fifth tab, browse or search surface, score, rejection notification, gender field, group event, or path to message without mutual interest.
+- **Calm Technology check (Principle VIII)**: *Reduce or add attention?* Reduces it: a member learns of the five moments without opening the app; the only added surface is one explanation, shown once until answered, never beside an introduction, and never repeated on the app's initiative. *Inform or alarm?* Informs: fixed calm copy with a neutral heading, the phone's standard banner at most once, no sound, haptic, or animation of the app's own, and no banner at all when the member is already on the destination screen. *Can it live in the periphery?* Yes: notifications live on the lock screen and in the phone's list, are grouped and replaced there by the backend, and are cleared once the member has seen the item; inside the app only the existing Messages badge changes, no icon badge is shown, and no notification centre is added. *Help two people meet, or keep them in the app?* Every kind moves a member toward or through an in-person meeting: an introduction to consider, a conversation to coordinate, a reminder to show up, private feedback afterwards. No kind exists to bring a member back, and no streak, check-in, inactivity, expiry, or marketing notification is added. *Fail quietly?* Yes: an offline permission answer, a failed registration, a failed refresh after an arrival, an expired or ended item, an unknown kind, an offline cold launch, and a sign-out that cannot confirm removal all produce no error and block no action; foreground refresh remains the recovery path. *Is there a simpler way?* The phone's own dialog, banner, sound, grouping, Settings page, and Focus handling are reused; nothing is recreated in-app; registration is not tied to Settings changes; the explanation is the minimum the single permission ask requires. *Would a thoughtful professional find it normal?* Yes: being told once, after onboarding, what a tool will notify about, then managing it in iPhone Settings like every other app, never being nagged, and never being told about a Pass, is how professional tools behave.

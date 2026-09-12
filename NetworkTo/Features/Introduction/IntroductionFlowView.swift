@@ -25,6 +25,7 @@ struct IntroductionFlowView: View {
         .ntScreenBackground()
         .navigationTitle("Introduction")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { store.didViewNotificationItem(.introduction(store.introduction.id)) }
         .safeAreaInset(edge: .bottom) {
             if store.phase == .ready {
                 responseActions

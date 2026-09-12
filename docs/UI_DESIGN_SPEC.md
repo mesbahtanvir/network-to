@@ -101,7 +101,7 @@ The bottom navigation is fixed by the PRD.
 | **Messages** | Coordinate meetings after mutual interest | Conversation list, conversation, empty state |
 | **Profile** | Maintain professional context, preferences, availability, privacy, and account settings | Profile, editing, verification, preferences, safety |
 
-There is no separate notification centre in V1. Relevant notifications deep-link to the appropriate Today, Messages, or Profile state.
+There is no separate notification centre in V1. A tapped notification opens Today (introduction ready) or the referenced conversation in Messages (mutual interest, new message, meeting reminder, feedback due). Permission is asked once, from a card at the top of Today after onboarding; delivery preferences stay in iPhone Settings.
 
 ## 5. Screen inventory
 
@@ -128,11 +128,11 @@ Account context is progressive. O-02 through O-06 use short, focused steps and r
 
 | ID | Screen | Purpose | Required states |
 | --- | --- | --- | --- |
-| T-01 | Today — searching | Communicate that quality takes time | Active search, profile needs work, paused |
+| T-01 | Today — searching | Communicate that quality takes time | Active search, profile needs work, paused, notification invitation |
 | T-02 | Today — introduction ready | Announce one new introduction without showing a feed | New, seen |
 | T-03 | Introduction | Explain identity, reciprocal value, trust, and practical meeting context | Default, Available Today context |
 | T-04 | Pass confirmation | Make passing clear but inexpensive | Default, optional private feedback later |
-| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, introduction expired, non-mutual outcome |
+| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, introduction expired, non-mutual outcome, notification invitation |
 | T-06 | Mutual interest | Celebrate lightly and open the conversation | Default |
 | T-07 | Available Today | Set temporary area and broad time window | Off, configuring, active, expiring, expired |
 | T-08 | Upcoming meetup | Show the meeting context when one is known from conversation | Proposed, upcoming, changed |
@@ -168,7 +168,7 @@ A person should become a **Connection** only after the relationship progressed b
 | P-04 | Meeting preferences | Maintain work areas, formats, and usual availability | Default, customized |
 | P-05 | Work verification | Show verified company and reverification flow | Verified, expiring, changed company, pending |
 | P-06 | Privacy and safety | Explain inclusive introduction design and maintain blocked members and community standards | Default, blocked member present |
-| P-07 | Notification settings handoff | Open the app-specific notification page in iPhone Settings; do not recreate delivery controls in-app | Native Settings available, unavailable fallback |
+| P-07 | Notification settings handoff | Reflect the phone's permission status; present the phone's dialog while it has never been asked, otherwise open the app-specific notification page in iPhone Settings; do not recreate delivery controls in-app | Never asked, on, off, native Settings available, unavailable fallback |
 | P-08 | Account | Support sign-out and account deletion | Default, destructive confirmation |
 
 ## 6. Core flows
@@ -307,6 +307,10 @@ Use when there is no introduction above the quality threshold.
 - Provide **Change** and **Turn off**.
 - Never display a map of nearby members.
 
+### Notification invitation
+
+Shown once, at the top of Today, only in the searching or waiting-privately state, only while the phone has never been asked, and never again after **Not now**. It names the five reasons for a notification, says delivery is managed in iPhone Settings, and offers **Turn on notifications** and **Not now**. It is a card, not a sheet or alert; Today stays usable beneath it, and it never appears beside an undecided introduction.
+
 ## 9. Messaging design
 
 Messaging is a practical coordination tool.
@@ -421,6 +425,10 @@ Verification seal, then the company mark (or company monogram) immediately befor
 ### Company mark
 
 A square tile the height of the text line it sits in, drawn on `company-mark-backing` with one-eighth inner padding and a 25% continuous corner radius, holding the company's own published icon fitted without distortion or recolouring. When no mark is available (none published, withheld, not approved, not yet downloaded, offline, or failed) the same tile shows the company monogram in `company-mark-glyph`: at most two uppercase characters from the first letter or digit of the first two words of the company name, skipping punctuation-only words and "and", "of", "the". A mark replaces a monogram on the next redraw with no animation. Marks appear beside the verified company name on the introduction and mutual-interest identity rows, in conversation rows and the conversation header, in connection rows and detail, and on the member's own profile identity row; never in onboarding, the Edit profile Company field, the "Work email verified" settings row, or beside typed experience history.
+
+### Notification invitation
+
+A card at the top of Today with the heading **When network.to will notify you**, one sentence naming the five reasons and one stating that delivery is managed in iPhone Settings, then **Turn on notifications** (filled) and **Not now** (secondary) with equal targets. No symbol, no motion, no countdown. Shown until answered; **Not now** is remembered per member on the phone and cleared only after account deletion. Implemented as `NTNotificationInviteCard`.
 
 ### Professional topic label
 

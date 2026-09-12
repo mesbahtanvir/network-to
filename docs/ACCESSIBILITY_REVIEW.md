@@ -61,6 +61,7 @@ Company marks and company monograms are decorative (`accessibilityHidden`); the 
 The SwiftUI implementation must still be tested on device or Simulator for:
 
 - VoiceOver reading order and custom action names;
+- the notification invitation card on Today: first in the reading order while it is showing, both buttons announced with label and hint, no truncation at the largest accessibility text size at 320 pt, nothing animating;
 - Dynamic Type through the largest accessibility sizes;
 - Bold Text, Button Shapes, Differentiate Without Colour, and Increased Contrast;
 - Reduce Motion and Reduce Transparency;

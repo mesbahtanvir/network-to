@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct NetworkToApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = AppStore()
     @StateObject private var subscriptions = SubscriptionStore()
     @Environment(\.scenePhase) private var scenePhase
@@ -23,19 +24,26 @@ struct NetworkToApp: App {
             .environmentObject(subscriptions)
             .tint(NTColor.accentStrong)
             .task {
+                appDelegate.attach(store)
                 async let restore: Void = store.restoreBackendSession()
                 await subscriptions.prepare()
                 await restore
                 if store.hasAuthenticated, let signedTransaction = subscriptions.latestSignedTransaction {
                     await store.synchronizeAppStoreTransaction(signedTransaction)
                 }
+                await store.registerForRemoteNotificationsIfAllowed()
             }
             .onOpenURL { url in
                 Task { await store.acceptMagicLinkCallback(url) }
             }
             .onChange(of: scenePhase) { _, phase in
-                guard phase == .active, store.isUsingLiveBackend else { return }
-                Task { await store.restoreBackendSession() }
+                guard phase == .active else { return }
+                Task {
+                    if store.isUsingLiveBackend { await store.restoreBackendSession() }
+                    // Re-reads the phone's permission (iOS gives no callback when Settings change)
+                    // and refreshes the registration's last-confirmed time while allowed.
+                    await store.registerForRemoteNotificationsIfAllowed()
+                }
             }
         }
     }

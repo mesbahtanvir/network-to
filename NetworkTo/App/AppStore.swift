@@ -24,12 +24,25 @@ final class AppStore: ObservableObject {
     @Published private(set) var introduction: Introduction
     /// Company marks this phone holds, keyed by reference. Never leaves the store; cleared with local state.
     @Published private(set) var companyMarks: [CompanyMarkReference: Data] = [:]
+    /// The phone's permission state for this app, re-read on every activation; `.unknown` until read.
+    @Published private(set) var notificationAuthorization: NotificationAuthorizationStatus = .unknown
+    /// "Not now" for this member on this phone; survives sign-out and clears only after deletion.
+    @Published private(set) var hasDeclinedNotificationInvite = false
+    /// Navigation path of the Messages tab, owned here so a tapped notification can push the conversation.
+    @Published var messagesPath: [MessagesDestination] = []
+    private(set) var pendingNotificationRoute: NotificationRoute?
+    private(set) var pendingDeviceRegistration: DeviceRegistration?
+    private(set) var registeredDeviceRegistration: DeviceRegistration?
+    private(set) var signOutTask: Task<Void, Never>?
     private let defaults: UserDefaults
     private let backend: any BackendService
     private let markCache: CompanyMarkDiskCache
+    private let notificationCenter: any NotificationCenterClient
     private var pendingCompany: String?
     private var backendUpdatesTask: Task<Void, Never>?
     private var companyMarkTasks: [CompanyMarkReference: Task<Void, Never>] = [:]
+    private var refreshTask: Task<Void, Never>?
+    private var hasAttemptedSessionRestore = false
 
     init(
         defaults: UserDefaults = .standard,
@@ -39,13 +52,15 @@ final class AppStore: ObservableObject {
         seedMockData: Bool = true,
         membership: MembershipStatus? = nil,
         backend: (any BackendService)? = nil,
-        markCache: CompanyMarkDiskCache? = nil
+        markCache: CompanyMarkDiskCache? = nil,
+        notificationCenter: (any NotificationCenterClient)? = nil
     ) {
         let resolvedBackend = backend ?? BackendFactory.make()
         let usesMockBackend = !resolvedBackend.isLive
         self.defaults = defaults
         self.backend = resolvedBackend
         self.markCache = markCache ?? CompanyMarkDiskCache()
+        self.notificationCenter = notificationCenter ?? (SystemNotificationCenterClient() as any NotificationCenterClient)
         self.phase = resolvedBackend.isLive ? .searching : startPhase
         self.hasAuthenticated = hasAuthenticated ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.authenticationKey))
         self.hasCompletedOnboarding = hasCompletedOnboarding ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.onboardingKey))
@@ -123,6 +138,7 @@ final class AppStore: ObservableObject {
             self.phase = .searching
         }
         #endif
+        reloadNotificationMemory()
     }
 
     static let authenticationKey = "networkto.hasAuthenticated"
@@ -149,15 +165,38 @@ final class AppStore: ObservableObject {
         guard backend.isLive else { return }
         guard await backend.hasValidSession() else {
             hasAuthenticated = false
+            finishSessionRestore()
             return
         }
         hasAuthenticated = true
         await refreshFromBackend()
         startBackendUpdates()
+        finishSessionRestore()
+        await syncDeviceRegistration()
     }
 
-    func refreshFromBackend() async {
-        guard !isRefreshing else { return }
+    /// A tapped notification that arrived before the session was restored is applied, or
+    /// discarded, only now, against restored and refreshed state.
+    private func finishSessionRestore() {
+        hasAttemptedSessionRestore = true
+        applyPendingNotificationRouteIfReady()
+    }
+
+    /// Replaces domain state from one snapshot. Concurrent calls share the in-flight refresh so
+    /// a tapped notification never applies to stale state. The silent variant reports nothing
+    /// because it follows an arriving notification rather than a member action.
+    func refreshFromBackend(silently: Bool = false) async {
+        if let refreshTask {
+            await refreshTask.value
+            return
+        }
+        let task = Task { await performRefresh(silently: silently) }
+        refreshTask = task
+        await task.value
+        if refreshTask == task { refreshTask = nil }
+    }
+
+    private func performRefresh(silently: Bool) async {
         isRefreshing = true
         defer { isRefreshing = false }
         do {
@@ -181,8 +220,9 @@ final class AppStore: ObservableObject {
                 phase = .searching
             }
             prefetchCompanyMarks(for: data)
+            reloadNotificationMemory()
         } catch {
-            transientMessage = error.localizedDescription
+            if !silently { transientMessage = error.localizedDescription }
         }
     }
 
@@ -280,6 +320,8 @@ final class AppStore: ObservableObject {
         defaults.set(true, forKey: Self.authenticationKey)
         await refreshFromBackend()
         startBackendUpdates()
+        await registerForRemoteNotificationsIfAllowed()
+        await syncDeviceRegistration()
     }
 
     func completeOnboarding() {
@@ -293,6 +335,8 @@ final class AppStore: ObservableObject {
                 if !backend.isLive { membership = .trial() }
                 defaults.set(true, forKey: Self.onboardingKey)
                 startBackendUpdates()
+                await registerForRemoteNotificationsIfAllowed()
+                await syncDeviceRegistration()
             }
             catch { transientMessage = error.localizedDescription }
         }
@@ -312,19 +356,31 @@ final class AppStore: ObservableObject {
                 Task {
                     await refreshFromBackend()
                     startBackendUpdates()
+                    await registerForRemoteNotificationsIfAllowed()
+                    await syncDeviceRegistration()
                 }
             }
         }
     }
 
+    /// Ends the session locally at once. This phone's registration is removed first, bounded to
+    /// five seconds, and forgotten whatever the outcome; "Not now" is kept for this member.
     func signOut() {
         backendUpdatesTask?.cancel()
         backendUpdatesTask = nil
+        let registration = registeredDeviceRegistration
+        forgetDeviceRegistration()
+        pendingNotificationRoute = nil
+        messagesPath = []
         hasAuthenticated = false
         defaults.set(false, forKey: Self.authenticationKey)
         selectedTab = .today
         clearCompanyMarks()
-        Task {
+        let backend = self.backend
+        signOutTask = Task {
+            if let registration {
+                await Self.unregisterDeviceToken(registration.token, from: backend, timeout: .seconds(5))
+            }
             do { try await backend.signOut() }
             catch { transientMessage = error.localizedDescription }
         }
@@ -685,6 +741,7 @@ final class AppStore: ObservableObject {
             Task {
                 do {
                     try await backend.deleteAccount()
+                    clearNotificationMemory()
                     resetDemo(includeOnboarding: true)
                     hasAuthenticated = false
                     defaults.set(false, forKey: Self.authenticationKey)
@@ -694,6 +751,7 @@ final class AppStore: ObservableObject {
                 }
             }
         } else {
+            clearNotificationMemory()
             resetDemo(includeOnboarding: true)
             hasAuthenticated = false
             defaults.set(false, forKey: Self.authenticationKey)
@@ -717,6 +775,8 @@ final class AppStore: ObservableObject {
         connections = []
         availability = nil
         selectedTab = .today
+        messagesPath = []
+        pendingNotificationRoute = nil
         membership = .trial()
         clearCompanyMarks()
         if includeOnboarding {
@@ -749,9 +809,206 @@ final class AppStore: ObservableObject {
             }
         }
     }
+
+    // MARK: - Notifications
+
+    static let notificationSettingsFallbackNotice = "Notifications are managed in iPhone Settings under network.to"
+
+    /// The single explanation that precedes the phone's dialog: only after onboarding, only while
+    /// Today is searching or privately waiting, only while the phone has never been asked, and
+    /// never again after "Not now" for this member on this phone.
+    var shouldOfferNotificationInvite: Bool {
+        NotificationInvitePolicy.shouldOffer(
+            authorization: notificationAuthorization,
+            hasAuthenticated: hasAuthenticated,
+            hasCompletedOnboarding: hasCompletedOnboarding,
+            canReceiveIntroductions: membership.hasAccess,
+            phase: phase,
+            hasDeclined: hasDeclinedNotificationInvite
+        )
+    }
+
+    /// Registration needs a real account: never in demonstration mode, never signed out, never
+    /// before onboarding is complete.
+    var isReadyForDeviceRegistration: Bool {
+        backend.isLive && hasAuthenticated && hasCompletedOnboarding
+    }
+
+    func declineNotificationInvite() {
+        hasDeclinedNotificationInvite = true
+        defaults.set(true, forKey: Self.notificationInviteDeclinedKey(for: member.id))
+    }
+
+    func refreshNotificationAuthorization() async {
+        notificationAuthorization = await notificationCenter.authorizationStatus()
+    }
+
+    /// Presents the phone's dialog from the invitation card or the Profile row. Never twice: the
+    /// phone decides once, and only iPhone Settings can change it afterwards.
+    func requestNotificationAuthorization() async {
+        guard notificationAuthorization.canPrompt else { return }
+        notificationAuthorization = await notificationCenter.requestAuthorization()
+        await registerForRemoteNotificationsIfAllowed()
+    }
+
+    /// Re-reads the phone's status, then asks iOS for the token when alerts are allowed and a
+    /// member with complete onboarding is signed in on the live backend. iOS answers through the
+    /// app delegate with the current token, which registers again so the last-confirmed time moves.
+    func registerForRemoteNotificationsIfAllowed() async {
+        await refreshNotificationAuthorization()
+        guard notificationAuthorization.allowsDelivery, isReadyForDeviceRegistration else { return }
+        notificationCenter.registerForRemoteNotifications()
+    }
+
+    func receiveDeviceRegistration(_ registration: DeviceRegistration) async {
+        pendingDeviceRegistration = registration
+        await syncDeviceRegistration()
+    }
+
+    /// Registers the pending token once the member is ready, remembers it for this member, and
+    /// removes the previously remembered token when it changed. A failure stays silent and keeps
+    /// the token pending for the next activation.
+    func syncDeviceRegistration() async {
+        guard isReadyForDeviceRegistration, let pending = pendingDeviceRegistration else { return }
+        do {
+            try await backend.registerDeviceToken(pending.token, environment: pending.environment)
+        } catch {
+            return
+        }
+        guard pendingDeviceRegistration == pending else { return }
+        pendingDeviceRegistration = nil
+        let previous = registeredDeviceRegistration
+        rememberDeviceRegistration(pending)
+        if let previous, previous.token != pending.token {
+            _ = try? await backend.unregisterDeviceToken(previous.token)
+        }
+    }
+
+    /// Buffers a tapped notification until the first session restore has been attempted, then
+    /// applies it, or discards it when no signed-in, onboarded member can receive it.
+    func handleNotificationRoute(_ route: NotificationRoute) {
+        pendingNotificationRoute = route
+        applyPendingNotificationRouteIfReady()
+    }
+
+    private func applyPendingNotificationRouteIfReady() {
+        guard let route = pendingNotificationRoute, !backend.isLive || hasAttemptedSessionRestore else { return }
+        pendingNotificationRoute = nil
+        guard hasAuthenticated, hasCompletedOnboarding else { return }
+        switch route {
+        case .introduction:
+            selectedTab = .today
+        case .conversation(let id, _):
+            selectedTab = .messages
+            showConversation(matching: id)
+        }
+        guard backend.isLive else { return }
+        Task {
+            await refreshFromBackend(silently: true)
+            if case .conversation(let id, _) = route { showConversation(matching: id) }
+        }
+    }
+
+    /// Pushes the conversation a notification refers to, but only one the member can already
+    /// open; a stale or foreign identifier leaves Messages in its current state.
+    private func showConversation(matching id: UUID?) {
+        guard canMessage, let conversation, id == nil || conversation.id == id else { return }
+        let destination = MessagesDestination.conversation(conversation.id)
+        if messagesPath.last != destination { messagesPath = [destination] }
+    }
+
+    func isViewingDestination(of route: NotificationRoute) -> Bool {
+        guard hasAuthenticated, hasCompletedOnboarding else { return false }
+        switch route {
+        case .introduction:
+            return selectedTab == .today
+        case .conversation(let id, _):
+            guard let id, selectedTab == .messages, let conversation, conversation.id == id else { return false }
+            return messagesPath.last == .conversation(id)
+        }
+    }
+
+    /// Called while the app is open. The phone shows its standard banner unless the member is
+    /// already on the destination; either way the state refreshes quietly.
+    func shouldPresentArrivingNotification(_ route: NotificationRoute?) -> Bool {
+        if backend.isLive {
+            Task { await refreshFromBackend(silently: true) }
+        }
+        guard let route else { return true }
+        return !isViewingDestination(of: route)
+    }
+
+    /// Once an item is on screen, notifications about it leave the phone's list.
+    func didViewNotificationItem(_ item: NotificationItem) {
+        let center = notificationCenter
+        Task { await center.removeDeliveredNotifications(about: item) }
+    }
+
+    static func notificationInviteDeclinedKey(for memberID: UUID) -> String {
+        "networkto.notifications.invite.declined.\(memberID.uuidString)"
+    }
+
+    static func deviceRegistrationKey(for memberID: UUID) -> String {
+        "networkto.notifications.registration.\(memberID.uuidString)"
+    }
+
+    /// Loads this member's phone memory; runs whenever the member is identified or replaced.
+    private func reloadNotificationMemory() {
+        hasDeclinedNotificationInvite = defaults.bool(forKey: Self.notificationInviteDeclinedKey(for: member.id))
+        registeredDeviceRegistration = storedDeviceRegistration(for: member.id)
+    }
+
+    private func storedDeviceRegistration(for memberID: UUID) -> DeviceRegistration? {
+        guard let stored = defaults.dictionary(forKey: Self.deviceRegistrationKey(for: memberID)),
+              let token = stored["token"] as? String,
+              let rawEnvironment = stored["environment"] as? String,
+              let environment = PushEnvironment(rawValue: rawEnvironment)
+        else { return nil }
+        return DeviceRegistration(token: token, environment: environment)
+    }
+
+    private func rememberDeviceRegistration(_ registration: DeviceRegistration) {
+        registeredDeviceRegistration = registration
+        defaults.set(
+            ["token": registration.token, "environment": registration.environment.rawValue],
+            forKey: Self.deviceRegistrationKey(for: member.id)
+        )
+    }
+
+    /// Sign-out forgets the registration (after the removal attempt) but keeps "Not now".
+    private func forgetDeviceRegistration() {
+        pendingDeviceRegistration = nil
+        registeredDeviceRegistration = nil
+        defaults.removeObject(forKey: Self.deviceRegistrationKey(for: member.id))
+    }
+
+    /// Only after the backend confirms account deletion.
+    private func clearNotificationMemory() {
+        forgetDeviceRegistration()
+        hasDeclinedNotificationInvite = false
+        defaults.removeObject(forKey: Self.notificationInviteDeclinedKey(for: member.id))
+    }
+
+    /// Removes this phone's registration before the session ends, waiting at most `timeout`.
+    private nonisolated static func unregisterDeviceToken(
+        _ token: String,
+        from backend: any BackendService,
+        timeout: Duration
+    ) async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { _ = try? await backend.unregisterDeviceToken(token) }
+            group.addTask { _ = try? await Task.sleep(for: timeout) }
+            _ = await group.next()
+            group.cancelAll()
+        }
+    }
 }
 
 enum MainTab: Hashable, Sendable { case today, connections, messages, profile }
+
+/// The Messages tab's navigation values; owned by the store so a tapped notification can push
+/// the conversation exactly as a manual tap would.
+enum MessagesDestination: Hashable, Sendable { case conversation(UUID) }
 
 enum AuthenticationIntent: Hashable, Sendable { case signUp, signIn }
 
