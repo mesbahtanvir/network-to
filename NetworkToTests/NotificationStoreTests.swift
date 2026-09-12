@@ -96,7 +96,7 @@ final class NotificationStoreTests: XCTestCase {
         XCTAssertEqual(store.notificationAuthorization, .authorized)
         XCTAssertFalse(store.shouldOfferNotificationInvite)
         XCTAssertFalse(store.hasDeclinedNotificationInvite)
-        XCTAssertNil(store.transientMessage)
+        XCTAssertNil(store.notice)
     }
 
     func testDecliningInTheDialogIsFinalAndSilent() async {
@@ -112,7 +112,7 @@ final class NotificationStoreTests: XCTestCase {
         XCTAssertEqual(store.notificationAuthorization, .denied)
         XCTAssertFalse(store.shouldOfferNotificationInvite)
         XCTAssertEqual(client.registerCalls, 0)
-        XCTAssertNil(store.transientMessage)
+        XCTAssertNil(store.notice)
     }
 
     func testADeniedPhoneIsNeverPrompted() async {

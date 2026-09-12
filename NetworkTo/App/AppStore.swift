@@ -15,7 +15,8 @@ final class AppStore: ObservableObject {
     @Published private(set) var membership: MembershipStatus
     @Published private(set) var isRefreshing = false
     @Published private(set) var isCompletingOnboarding = false
-    @Published var transientMessage: String?
+    /// The single notice channel. Errors stay until dismissed, retried, or replaced.
+    @Published private(set) var notice: AppNotice?
     @Published private(set) var resumeImportError: String?
     @Published private(set) var resumeImportStage: ResumeImportStage = .readingDocument
     @Published private(set) var verifiedWorkEmail: String
@@ -34,6 +35,10 @@ final class AppStore: ObservableObject {
     private(set) var pendingDeviceRegistration: DeviceRegistration?
     private(set) var registeredDeviceRegistration: DeviceRegistration?
     private(set) var signOutTask: Task<Void, Never>?
+    /// The introduction this member chose Interested on, remembered so the ended state can be
+    /// shown once at its expiry; the phone never learns why it ended.
+    private(set) var waitedIntroductionID: UUID?
+    private var pendingRetry: (@MainActor () -> Void)?
     private let defaults: UserDefaults
     private let backend: any BackendService
     private let markCache: CompanyMarkDiskCache
@@ -129,7 +134,7 @@ final class AppStore: ObservableObject {
             self.phase = .waiting
             confirmMutualInterest()
             self.phase = .feedback
-            recordFeedback(.good, stayConnected: true)
+            applyFeedback(.good, stayConnected: true)
         } else if launchArguments.contains("--introduction-nonmutual-preview") {
             self.phase = .notMutual
         }
@@ -138,7 +143,7 @@ final class AppStore: ObservableObject {
             self.phase = .searching
         }
         #endif
-        reloadNotificationMemory()
+        reloadMemberMemory()
     }
 
     static let authenticationKey = "networkto.hasAuthenticated"
@@ -212,17 +217,34 @@ final class AppStore: ObservableObject {
             membership = data.membership
             availability = data.availability
             hasCompletedOnboarding = data.onboardingComplete
-            if data.conversation != nil {
-                phase = .conversation
-            } else if data.introduction != nil {
-                phase = data.waitingForReciprocalInterest ? .waiting : .ready
-            } else {
-                phase = .searching
-            }
+            reloadMemberMemory()
+            applyIntroductionState(from: data)
             prefetchCompanyMarks(for: data)
-            reloadNotificationMemory()
         } catch {
-            if !silently { transientMessage = error.localizedDescription }
+            // No member action waits on a refresh; foreground refresh remains the recovery path.
+            if !silently { presentInformation("Couldn’t refresh right now.") }
+        }
+    }
+
+    /// Derives the phase from a snapshot. An introduction the member was waiting on that is no
+    /// longer returned has ended (at its expiry, by mutual interest, or by a block); the phone
+    /// shows the ended state once and never knows more than that.
+    private func applyIntroductionState(from data: BackendSnapshot) {
+        if data.conversation != nil {
+            phase = .conversation
+            forgetWaitedIntroduction()
+        } else if let current = data.introduction {
+            if data.waitingForReciprocalInterest {
+                phase = .waiting
+                rememberWaitedIntroduction(current.id)
+            } else {
+                phase = .ready
+                forgetWaitedIntroduction()
+            }
+        } else if waitedIntroductionID != nil {
+            phase = .notMutual
+        } else {
+            phase = .searching
         }
     }
 
@@ -309,7 +331,7 @@ final class AppStore: ObservableObject {
             try await backend.acceptMagicLinkCallback(url)
             await completeLiveAuthentication(email: nil)
         } catch {
-            transientMessage = error.localizedDescription
+            presentError(error.localizedDescription)
         }
     }
 
@@ -338,7 +360,9 @@ final class AppStore: ObservableObject {
                 await registerForRemoteNotificationsIfAllowed()
                 await syncDeviceRegistration()
             }
-            catch { transientMessage = error.localizedDescription }
+            catch {
+                presentError(error.localizedDescription) { [weak self] in self?.completeOnboarding() }
+            }
         }
     }
 
@@ -376,13 +400,15 @@ final class AppStore: ObservableObject {
         defaults.set(false, forKey: Self.authenticationKey)
         selectedTab = .today
         clearCompanyMarks()
+        dismissNotice()
         let backend = self.backend
         signOutTask = Task {
             if let registration {
                 await Self.unregisterDeviceToken(registration.token, from: backend, timeout: .seconds(5))
             }
-            do { try await backend.signOut() }
-            catch { transientMessage = error.localizedDescription }
+            // The session is already over on this phone; nothing the member can do depends on
+            // the remote revocation, so its failure raises nothing.
+            _ = try? await backend.signOut()
         }
     }
 
@@ -394,8 +420,9 @@ final class AppStore: ObservableObject {
             } else {
                 membership = .subscribed()
             }
+            presentSuccess("Membership activated")
         } catch {
-            transientMessage = "Apple confirmed the purchase, but account access is still syncing. We’ll retry when the app opens."
+            presentInformation("Apple confirmed the purchase, but account access is still syncing. We’ll retry when the app opens.")
         }
     }
 
@@ -429,10 +456,17 @@ final class AppStore: ObservableObject {
         member.contributionBoundaries = contributionBoundaries.trimmingCharacters(in: .whitespacesAndNewlines)
         member.topics = Array((contributionAreas + growthAreas).uniqued().prefix(4))
         member.bio = member.roleScope
-        if hasCompletedOnboarding {
-            Task {
-                do { try await backend.saveProfile(member, onboardingComplete: true) }
-                catch { transientMessage = error.localizedDescription }
+        if hasCompletedOnboarding { saveProfileKeepingEdits() }
+    }
+
+    /// Edits stay on screen whatever the save does. A failed save says so and offers to run
+    /// again with the text as it is at that moment.
+    private func saveProfileKeepingEdits() {
+        let profile = member
+        Task {
+            do { try await backend.saveProfile(profile, onboardingComplete: true) }
+            catch {
+                presentError("Profile changes weren’t saved.") { [weak self] in self?.saveProfileKeepingEdits() }
             }
         }
     }
@@ -440,16 +474,17 @@ final class AppStore: ObservableObject {
     func respondInterested() {
         guard phase == .ready else { return }
         phase = .waiting
+        let introductionID = introduction.id
         Task {
             do {
-                switch try await backend.respondToIntroduction(introduction.id, interested: true) {
-                case .waiting: break
+                switch try await backend.respondToIntroduction(introductionID, interested: true) {
+                case .waiting: rememberWaitedIntroduction(introductionID)
                 case .mutual: await refreshFromBackend()
                 case .notMutual: phase = .notMutual
                 }
             } catch {
                 phase = .ready
-                transientMessage = error.localizedDescription
+                presentError(error.localizedDescription)
             }
         }
     }
@@ -461,7 +496,7 @@ final class AppStore: ObservableObject {
             do { _ = try await backend.respondToIntroduction(introduction.id, interested: false) }
             catch {
                 phase = .ready
-                transientMessage = error.localizedDescription
+                presentError(error.localizedDescription)
             }
         }
     }
@@ -529,13 +564,17 @@ final class AppStore: ObservableObject {
         planMeetup(detail: "Thursday at 4:30 PM · Union Station")
     }
 
+    /// The plan appears only once the backend holds it, so the details on screen are the
+    /// details the other member will be told about.
     func planMeetup(detail: String) {
-        guard canMessage else { return }
-        conversation?.meetupStatus = .planned(detail)
-        if let conversationID = conversation?.id {
-            Task {
-                do { try await backend.createMeetup(conversationID: conversationID, detail: detail) }
-                catch { transientMessage = error.localizedDescription }
+        guard canMessage, let conversationID = conversation?.id else { return }
+        Task {
+            do {
+                try await backend.createMeetup(conversationID: conversationID, detail: detail)
+                guard conversation?.id == conversationID else { return }
+                conversation?.meetupStatus = .planned(detail)
+            } catch {
+                presentError("Coffee plan wasn’t sent.") { [weak self] in self?.planMeetup(detail: detail) }
             }
         }
     }
@@ -546,14 +585,25 @@ final class AppStore: ObservableObject {
         phase = .feedback
     }
 
-    func recordFeedback(_ outcome: MeetupOutcome, stayConnected: Bool) {
-        guard phase == .feedback, let conversation else { return }
-        self.conversation?.meetupStatus = .completed
-        Task {
-            do { try await backend.recordMeetupFeedback(conversationID: conversation.id, outcome: outcome, stayConnected: stayConnected) }
-            catch { transientMessage = error.localizedDescription }
+    /// Feedback changes nothing until the backend holds it: no Connection, phase, or tab moves
+    /// before confirmation, and a failure returns `false` so the sheet can say so and stay open.
+    @discardableResult
+    func recordFeedback(_ outcome: MeetupOutcome, stayConnected: Bool) async -> Bool {
+        guard phase == .feedback, let conversation else { return false }
+        do {
+            try await backend.recordMeetupFeedback(conversationID: conversation.id, outcome: outcome, stayConnected: stayConnected)
+        } catch {
+            return false
         }
+        if self.conversation?.id == conversation.id { applyFeedback(outcome, stayConnected: stayConnected) }
+        return true
+    }
 
+    /// The state feedback produces once it is held; the demonstration preview seeds a completed
+    /// meeting through the same path without a backend round trip.
+    private func applyFeedback(_ outcome: MeetupOutcome, stayConnected: Bool) {
+        guard let conversation else { return }
+        self.conversation?.meetupStatus = .completed
         if outcome != .didNotMeet, stayConnected,
            !connections.contains(where: { $0.person.id == conversation.person.id }) {
             connections.append(Connection(
@@ -570,60 +620,76 @@ final class AppStore: ObservableObject {
 
     func setAvailability(area: TodayAvailability.Area, window: TodayAvailability.Window) {
         guard canStartNewMatching else {
-            transientMessage = "Membership is needed for new introductions."
+            presentInformation("Membership is needed for new introductions.")
             return
         }
-        availability = TodayAvailability(
+        let previous = availability
+        let next = TodayAvailability(
             area: area,
             window: window,
             expiresAt: Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: Date())
                 ?? Date().addingTimeInterval(14_400)
         )
-        let currentAvailability = availability
-        Task {
-            do { try await backend.saveAvailability(currentAvailability) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        availability = next
+        saveOptimistically(
+            { try await self.backend.saveAvailability(next) },
+            rollback: { self.availability = previous },
+            failure: "Availability wasn’t saved.",
+            retry: { $0.setAvailability(area: area, window: window) }
+        )
     }
 
     func clearAvailability() {
+        let previous = availability
         availability = nil
-        Task {
-            do { try await backend.saveAvailability(nil) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        saveOptimistically(
+            { try await self.backend.saveAvailability(nil) },
+            rollback: { self.availability = previous },
+            failure: "Availability wasn’t saved.",
+            retry: { $0.clearAvailability() }
+        )
     }
 
     func saveNetworkingPreferences(_ preferences: NetworkingPreferences) {
+        let previous = networkingPreferences
         networkingPreferences = preferences
-        transientMessage = "Introduction preferences saved"
-        Task {
-            do { try await backend.saveNetworkingPreferences(preferences) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        saveOptimistically(
+            { try await self.backend.saveNetworkingPreferences(preferences) },
+            rollback: { self.networkingPreferences = previous },
+            failure: "Introduction preferences weren’t saved.",
+            success: "Introduction preferences saved",
+            retry: { $0.saveNetworkingPreferences(preferences) }
+        )
     }
 
     func saveMeetingPreferences(_ preferences: MeetingPreferences) {
+        let previous = meetingPreferences
         meetingPreferences = preferences
-        transientMessage = "Meeting preferences saved"
-        Task {
-            do { try await backend.saveMeetingPreferences(preferences) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        saveOptimistically(
+            { try await self.backend.saveMeetingPreferences(preferences) },
+            rollback: { self.meetingPreferences = previous },
+            failure: "Meeting preferences weren’t saved.",
+            success: "Meeting preferences saved",
+            retry: { $0.saveMeetingPreferences(preferences) }
+        )
     }
 
+    /// Kept only on this phone, so the change is complete the moment it is made.
     func saveSafetyPreferences(_ preferences: SafetyPreferences) {
         safetyPreferences = preferences
-        transientMessage = "Safety settings saved"
+        presentSuccess("Safety settings saved")
     }
 
     func unblock(_ name: String) {
+        let previous = safetyPreferences.blockedMembers
         safetyPreferences.blockedMembers.removeAll { $0 == name }
-        transientMessage = "\(name) was unblocked"
-        Task {
-            do { try await backend.unblockMember(named: name) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        saveOptimistically(
+            { try await self.backend.unblockMember(named: name) },
+            rollback: { self.safetyPreferences.blockedMembers = previous },
+            failure: "\(name) wasn’t unblocked.",
+            success: "\(name) was unblocked",
+            retry: { $0.unblock(name) }
+        )
     }
 
     func processResume(fileURL: URL) async {
@@ -675,46 +741,60 @@ final class AppStore: ObservableObject {
             member.contribution = experienceSummary
         }
         member.resumeStatus = .applied
-        transientMessage = "Résumé draft applied—review it before saving"
-        if hasCompletedOnboarding {
-            Task {
-                do { try await backend.saveProfile(member, onboardingComplete: true) }
-                catch { transientMessage = error.localizedDescription }
-            }
-        }
+        presentSuccess("Résumé draft applied—review it before saving")
+        if hasCompletedOnboarding { saveProfileKeepingEdits() }
     }
 
     func endCurrentConversation() {
-        let conversationID = conversation?.id
+        guard let current = conversation else { return }
+        let previousPhase = phase
         conversation?.isEnded = true
         phase = .searching
-        transientMessage = "Conversation ended"
-        if let conversationID {
-            Task {
-                do { try await backend.endConversation(conversationID) }
-                catch { transientMessage = error.localizedDescription }
-            }
-        }
+        saveOptimistically(
+            { try await self.backend.endConversation(current.id) },
+            rollback: {
+                if self.conversation?.id == current.id { self.conversation?.isEnded = current.isEnded }
+                self.phase = previousPhase
+            },
+            failure: "Conversation wasn’t ended.",
+            success: "Conversation ended",
+            retry: { $0.endCurrentConversation() }
+        )
     }
 
     func blockCurrentPerson() {
         guard let person = conversation?.person else { return }
-        conversation?.isBlocked = true
-        conversation?.isEnded = true
         block(person)
-        phase = .searching
     }
 
+    /// Blocking removes the person everywhere at once: the block list, Connections, and the
+    /// conversation when it is with them. A failed block restores all of it.
     func block(_ person: ProfessionalProfile) {
+        let previousBlocked = safetyPreferences.blockedMembers
+        let previousConnections = connections
+        let previousConversation = conversation
+        let previousPhase = phase
         if !safetyPreferences.blockedMembers.contains(person.name) {
             safetyPreferences.blockedMembers.append(person.name)
         }
         connections.removeAll { $0.person.id == person.id }
-        transientMessage = "\(person.name) was blocked"
-        Task {
-            do { try await backend.blockMember(person.id) }
-            catch { transientMessage = error.localizedDescription }
+        if conversation?.person.id == person.id {
+            conversation?.isBlocked = true
+            conversation?.isEnded = true
+            phase = .searching
         }
+        saveOptimistically(
+            { try await self.backend.blockMember(person.id) },
+            rollback: {
+                self.safetyPreferences.blockedMembers = previousBlocked
+                self.connections = previousConnections
+                self.conversation = previousConversation
+                self.phase = previousPhase
+            },
+            failure: "\(person.name) wasn’t blocked.",
+            success: "\(person.name) was blocked",
+            retry: { $0.block(person) }
+        )
     }
 
     func submitReport(category: ReportCategory, note: String) async throws {
@@ -724,16 +804,19 @@ final class AppStore: ObservableObject {
             subjectID: conversation?.person.id ?? introduction.person.id,
             conversationID: conversation?.id
         )
-        transientMessage = "Report submitted privately"
+        presentSuccess("Report submitted privately")
     }
 
     func removeConnection(_ id: UUID) {
-        connections.removeAll { $0.id == id }
-        transientMessage = "Connection removed"
-        Task {
-            do { try await backend.removeConnection(id) }
-            catch { transientMessage = error.localizedDescription }
-        }
+        guard let index = connections.firstIndex(where: { $0.id == id }) else { return }
+        let removed = connections.remove(at: index)
+        saveOptimistically(
+            { try await self.backend.removeConnection(id) },
+            rollback: { self.connections.insert(removed, at: min(index, self.connections.count)) },
+            failure: "Connection wasn’t removed.",
+            success: "Connection removed",
+            retry: { $0.removeConnection(id) }
+        )
     }
 
     func deleteAccount() {
@@ -741,26 +824,28 @@ final class AppStore: ObservableObject {
             Task {
                 do {
                     try await backend.deleteAccount()
-                    clearNotificationMemory()
+                    clearMemberMemory()
                     resetDemo(includeOnboarding: true)
                     hasAuthenticated = false
                     defaults.set(false, forKey: Self.authenticationKey)
-                    transientMessage = nil
+                    dismissNotice()
                 } catch {
-                    transientMessage = error.localizedDescription
+                    presentError(error.localizedDescription) { [weak self] in self?.deleteAccount() }
                 }
             }
         } else {
-            clearNotificationMemory()
+            clearMemberMemory()
             resetDemo(includeOnboarding: true)
             hasAuthenticated = false
             defaults.set(false, forKey: Self.authenticationKey)
-            transientMessage = nil
+            dismissNotice()
         }
     }
 
+    /// Continue from an ended or passed introduction; the ended state is shown once.
     func lookAgain() {
         guard phase == .passed || phase == .notMutual else { return }
+        forgetWaitedIntroduction()
         phase = .searching
     }
 
@@ -771,6 +856,7 @@ final class AppStore: ObservableObject {
 
     func resetDemo(includeOnboarding: Bool = false) {
         phase = .ready
+        forgetWaitedIntroduction()
         conversation = nil
         connections = []
         availability = nil
@@ -808,6 +894,89 @@ final class AppStore: ObservableObject {
                 // Realtime is an enhancement; foreground refresh remains the recovery path.
             }
         }
+    }
+
+    // MARK: - Notices
+
+    /// A completed action the backend has confirmed, or a purely local change. Leaves on its own.
+    func presentSuccess(_ text: String) {
+        pendingRetry = nil
+        notice = AppNotice(kind: .success, text: text)
+    }
+
+    /// Something worth knowing that asks nothing of the member. Leaves on its own.
+    func presentInformation(_ text: String) {
+        pendingRetry = nil
+        notice = AppNotice(kind: .information, text: text)
+    }
+
+    /// A member's own action that did not happen. Stays until dismissed, retried, or replaced;
+    /// a newer notice of any kind drops the older retry.
+    func presentError(_ text: String, retry: (@MainActor () -> Void)? = nil) {
+        pendingRetry = retry
+        notice = AppNotice(kind: .error, text: text, canRetry: retry != nil)
+    }
+
+    func dismissNotice() {
+        pendingRetry = nil
+        notice = nil
+    }
+
+    /// The auto-dismiss timer's variant: clears only the notice it was started for.
+    func dismissNotice(id: UUID) {
+        guard notice?.id == id else { return }
+        dismissNotice()
+    }
+
+    /// Runs the failed action again with its original values; the action raises its own
+    /// notice if it fails once more.
+    func retryFailedAction() {
+        let retry = pendingRetry
+        dismissNotice()
+        retry?()
+    }
+
+    /// Applies a change at once and, when the backend refuses it, restores what was there,
+    /// names the action that did not happen, and offers to run it again with the same values.
+    /// A success notice, where the action has one, appears only after the backend confirms.
+    private func saveOptimistically(
+        _ operation: @escaping @MainActor () async throws -> Void,
+        rollback: @escaping @MainActor () -> Void,
+        failure: String,
+        success: String? = nil,
+        retry: @escaping @MainActor (AppStore) -> Void
+    ) {
+        Task { [weak self] in
+            do {
+                try await operation()
+                guard let self, let success else { return }
+                self.presentSuccess(success)
+            } catch {
+                guard let self else { return }
+                rollback()
+                self.presentError(failure) { [weak self] in
+                    guard let self else { return }
+                    retry(self)
+                }
+            }
+        }
+    }
+
+    // MARK: - Ended introduction
+
+    static func waitedIntroductionKey(for memberID: UUID) -> String {
+        "networkto.introduction.waited.\(memberID.uuidString)"
+    }
+
+    /// Kept for this member on this phone so the ended state survives a relaunch.
+    private func rememberWaitedIntroduction(_ id: UUID) {
+        waitedIntroductionID = id
+        defaults.set(id.uuidString, forKey: Self.waitedIntroductionKey(for: member.id))
+    }
+
+    private func forgetWaitedIntroduction() {
+        waitedIntroductionID = nil
+        defaults.removeObject(forKey: Self.waitedIntroductionKey(for: member.id))
     }
 
     // MARK: - Notifications
@@ -953,9 +1122,11 @@ final class AppStore: ObservableObject {
     }
 
     /// Loads this member's phone memory; runs whenever the member is identified or replaced.
-    private func reloadNotificationMemory() {
+    private func reloadMemberMemory() {
         hasDeclinedNotificationInvite = defaults.bool(forKey: Self.notificationInviteDeclinedKey(for: member.id))
         registeredDeviceRegistration = storedDeviceRegistration(for: member.id)
+        waitedIntroductionID = defaults.string(forKey: Self.waitedIntroductionKey(for: member.id))
+            .flatMap(UUID.init(uuidString:))
     }
 
     private func storedDeviceRegistration(for memberID: UUID) -> DeviceRegistration? {
@@ -983,8 +1154,9 @@ final class AppStore: ObservableObject {
     }
 
     /// Only after the backend confirms account deletion.
-    private func clearNotificationMemory() {
+    private func clearMemberMemory() {
         forgetDeviceRegistration()
+        forgetWaitedIntroduction()
         hasDeclinedNotificationInvite = false
         defaults.removeObject(forKey: Self.notificationInviteDeclinedKey(for: member.id))
     }

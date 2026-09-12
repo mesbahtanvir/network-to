@@ -186,7 +186,7 @@ struct WorkVerificationView: View {
                 Text("Your account, conversations, and connections remain yours. A new company must be verified before its badge appears.")
                     .foregroundStyle(NTColor.textSecondary)
                 Button("Verify a new work email") {
-                    store.transientMessage = "Company reverification flow is ready for backend connection"
+                    store.presentInformation("Company reverification flow is ready for backend connection")
                 }
             }
         }

@@ -49,6 +49,12 @@ a directory, and a queue turns a decision into comparison shopping.
 - No member MUST be able to message or contact another member without a mutual introduction.
 - A Pass MUST never notify anyone. Waiting and non-mutual states MUST NOT attribute the
   outcome to either member and MUST NOT apply pressure (no countdowns, no status checks).
+- A Pass MUST be unobservable by the other member: it MUST NOT change the introduction's
+  status, expiry, presence, or waiting outcome as that member reads them, nor any
+  notification, badge, copy, or timing they receive. An introduction MUST end for a waiting
+  member only at its expiry, at mutual interest, or at a block, with one ended state shown
+  once; only both members passing closes it at once. The member who passed MUST NOT see the
+  introduction again and MUST be eligible for a new one at their cadence.
 - The product MUST NOT compute or display a compatibility score, ranking, like, follower
   count, rating, endorsement, or popularity signal. Ranking machinery MUST stay invisible and
   relevance MUST be explained in plain professional language without AI branding.
@@ -132,8 +138,13 @@ in the narrowest form the feature needs, because trust is the product.
   the mock rather than reach a bogus host.
 - When live, refresh MUST replace domain state from one `BackendSnapshot` and derive the phase
   from it; sessions MUST be restored on launch and when the scene becomes active; realtime is
-  an enhancement and foreground refresh is the recovery path. Optimistic transitions MUST roll
-  back on failure, `transientMessage` MUST be the single notice channel, and a StoreKit
+  an enhancement and foreground refresh is the recovery path. An optimistic transition MUST
+  roll back on failure and offer Retry with the same values, or the change MUST apply only
+  after the backend confirms. The store's `notice` MUST be the single notice channel; every
+  notice MUST carry a kind (success, information, error) that its symbol, tint, and text agree
+  on; success and information MUST dismiss themselves while an error MUST stay until
+  dismissed, retried, or replaced; a success notice MUST follow the backend's confirmation or
+  a change kept only on the phone; a failed refresh MUST be information. A StoreKit
   transaction MUST be forwarded server-side; the live client MUST never grant access locally.
 - Screens MUST compose native SwiftUI controls and MUST NOT recreate native accessibility,
   focus, keyboard, or navigation behaviour. Reusable components MUST use the `NT` prefix and
@@ -378,19 +389,26 @@ an amendment (MINOR to add or tighten, MAJOR to loosen), not a documentation upd
 Migration plan for 1.1.0 and 1.2.0 (existing code measured against Principles V and VIII):
 the repeating pulse on the résumé processing glyph and the perpetual spinner on the private
 waiting state were removed, and Today now greets the signed-in member and names the actual
-counterpart, all in the 1.2.0 PR. Still open, each a recorded follow-up with its own PR:
-`respond_to_introduction` returns `not_mutual` immediately after a counterpart's Pass and the
-client shows "This introduction didn't work out" (make it indistinguishable from waiting, which
-also needs a product decision on holding the member's one active introduction until expiry);
-`transientMessage` renders errors with the success glyph and auto-dismisses (give notices a
-kind and keep errors until dismissed); availability, preference, meetup, feedback, and safety
-saves keep optimistic state after a failure (add the `NTOfflineState` matrix). Until those
-land, the SHOULD deviations they represent are recorded here rather than in each PR.
+counterpart, all in the 1.2.0 PR. The three follow-ups recorded then (a counterpart's Pass
+observable through `respond_to_introduction` and the client's ended state; `transientMessage`
+rendering errors with the success glyph and auto-dismissing; availability, preference, meetup,
+feedback, and safety saves keeping optimistic state after a failure) were closed in 1.4.0, and
+no SHOULD deviation from Principles V and VIII remains recorded.
 
 1.3.0 (MINOR): `.github/workflows/ios.yml` now runs the unit tests and a Release compile for
 every pull request that touches the app, so Principle VII and the pull request gate require a
 green iOS workflow run instead of a manually recorded Xcode pass; device-only behaviour keeps
 a recorded manual check. No feature code changes.
+
+1.4.0 (MINOR): Principle II gains the rule that a Pass is unobservable by the other member,
+and Principle V now requires notices with a kind, errors that stay with Retry, and saves that
+roll back or wait for confirmation. `respond_to_introduction`, `get_current_introduction`, and
+the matching job hide a member's own Pass and hold the other member's introduction to its
+expiry; the client's `notice` replaces `transientMessage`; every listed save restores its
+state on failure or applies only after confirmation; the ended state appears once, at the
+expiry. The three follow-ups above are closed; `docs/UI_DESIGN_SPEC.md`,
+`docs/COMPONENT_STATE_SHEET.md`, `docs/DESIGN_PHILOSOPHY.md`, and `docs/SUPABASE_BACKEND.md`
+describe the shipped behaviour.
 
 Versioning follows MAJOR.MINOR.PATCH:
 - MAJOR: a principle is removed or redefined, a refused surface is admitted, a privacy or
@@ -408,4 +426,4 @@ Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
 `docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
 same PR as any change that alters what they describe.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12
+**Version**: 1.4.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12

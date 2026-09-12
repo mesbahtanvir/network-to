@@ -393,6 +393,9 @@ private struct MeetupFeedbackView: View {
     @State private var outcome: MeetupOutcome?
     @State private var stayConnected = true
     @State private var note = ""
+    @State private var isSubmitting = false
+    /// The sheet's own record of a refused submission; nothing else on the phone changes.
+    @State private var failure: AppNotice?
 
     var body: some View {
         NavigationStack {
@@ -441,6 +444,13 @@ private struct MeetupFeedbackView: View {
                             RoundedRectangle(cornerRadius: NTRadius.field, style: .continuous)
                                 .stroke(NTColor.separator, lineWidth: 1)
                         }
+                    if let failure {
+                        NTInlineNotice(
+                            notice: failure,
+                            dismiss: { self.failure = nil },
+                            retry: { submit() }
+                        )
+                    }
                 }
                 .padding(NTSpacing.lg)
             }
@@ -448,16 +458,27 @@ private struct MeetupFeedbackView: View {
             .navigationTitle("Private feedback")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                Button("Submit feedback") {
-                    guard let outcome else { return }
-                    store.recordFeedback(outcome, stayConnected: stayConnected)
-                    dismiss()
-                }
-                .buttonStyle(NTPrimaryButtonStyle())
-                .disabled(outcome == nil)
-                .padding(.horizontal, NTSpacing.lg)
-                .padding(.vertical, NTSpacing.sm)
-                .background(.ultraThinMaterial)
+                Button(failure == nil ? "Submit feedback" : "Retry") { submit() }
+                    .buttonStyle(NTPrimaryButtonStyle())
+                    .disabled(outcome == nil || isSubmitting)
+                    .padding(.horizontal, NTSpacing.lg)
+                    .padding(.vertical, NTSpacing.sm)
+                    .background(.ultraThinMaterial)
+            }
+        }
+    }
+
+    /// Nothing is recorded until the backend holds the feedback, and the sheet closes only then.
+    private func submit() {
+        guard let outcome, !isSubmitting else { return }
+        isSubmitting = true
+        Task {
+            let submitted = await store.recordFeedback(outcome, stayConnected: stayConnected)
+            isSubmitting = false
+            if submitted {
+                dismiss()
+            } else {
+                failure = AppNotice(kind: .error, text: "Feedback wasn’t submitted.", canRetry: true)
             }
         }
     }

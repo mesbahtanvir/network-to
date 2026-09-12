@@ -156,12 +156,12 @@ struct ProfileView: View {
     private func openNotificationSettings() {
         let appStore = store
         guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else {
-            appStore.transientMessage = AppStore.notificationSettingsFallbackNotice
+            appStore.presentInformation(AppStore.notificationSettingsFallbackNotice)
             return
         }
         openURL(url) { accepted in
             guard !accepted else { return }
-            Task { @MainActor in appStore.transientMessage = AppStore.notificationSettingsFallbackNotice }
+            Task { @MainActor in appStore.presentInformation(AppStore.notificationSettingsFallbackNotice) }
         }
     }
 

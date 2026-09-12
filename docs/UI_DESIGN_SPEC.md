@@ -132,7 +132,7 @@ Account context is progressive. O-02 through O-06 use short, focused steps and r
 | T-02 | Today — introduction ready | Announce one new introduction without showing a feed | New, seen |
 | T-03 | Introduction | Explain identity, reciprocal value, trust, and practical meeting context | Default, Available Today context |
 | T-04 | Pass confirmation | Make passing clear but inexpensive | Default, optional private feedback later |
-| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, introduction expired, non-mutual outcome, notification invitation |
+| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, ended at its expiry (one state, shown once, whatever ended it), notification invitation |
 | T-06 | Mutual interest | Celebrate lightly and open the conversation | Default |
 | T-07 | Available Today | Set temporary area and broad time window | Off, configuring, active, expiring, expired |
 | T-08 | Upcoming meetup | Show the meeting context when one is known from conversation | Proposed, upcoming, changed |
@@ -194,12 +194,15 @@ If **Pass**:
 
 `Pass → Neutral confirmation → Today searching`
 
+- A Pass is private. The introduction stays open for the other member with its original expiry, the member who passed never sees it again, and they may receive a new introduction at their normal cadence.
+
 If **Interested**:
 
 `Interested → Private waiting state`
 
 - The waiting state never says or implies that the other person has rejected the member.
-- If the introduction does not become mutual, use: **This introduction didn’t work out. We’ll keep looking for someone worthwhile.**
+- The wait ends only at the introduction's expiry (seven days from creation), through mutual interest, or through a block. The other member's Pass changes nothing the waiting member can see: not the copy, not the expiry, not the timing.
+- If the introduction does not become mutual, use: **This introduction didn’t work out. We’ll keep looking for someone worthwhile.** It appears once, at the same moment whether the other member passed or never answered, and **Continue** returns to Today searching.
 
 ### 6.3 Mutual interest to coffee
 
@@ -457,7 +460,11 @@ One secondary **Pass** button and one filled **Interested** button. Both have te
 
 ### Private waiting state
 
-A finite confirmation state that explains mutual gating and avoids status checking pressure.
+A finite confirmation state that explains mutual gating and avoids status checking pressure. It ends only at the introduction's expiry, at mutual interest, or at a block, never at the moment of the other member's Pass.
+
+### Notices
+
+One notice at a time, at the top of the screen, with a kind that its symbol, tint, and text all agree on. Success (checkmark) and information (info) leave on their own after about two seconds. An error (exclamation) names the action that did not happen ("Availability wasn’t saved.") and stays until the member dismisses it, retries it, or a newer notice replaces it; Retry repeats the action with the same values. A success notice appears only after the backend confirms the action, or at once for a change kept only on the phone. A refresh that fails is information, never an error, because no member action waits on it.
 
 ### Professional identity row
 

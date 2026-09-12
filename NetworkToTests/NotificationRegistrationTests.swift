@@ -125,7 +125,7 @@ final class NotificationRegistrationTests: XCTestCase {
         XCTAssertTrue(registered.isEmpty)
         XCTAssertEqual(store.pendingDeviceRegistration, failing)
         XCTAssertNil(store.registeredDeviceRegistration)
-        XCTAssertNil(store.transientMessage)
+        XCTAssertNil(store.notice)
     }
 
     func testRegistrationIsRememberedAcrossLaunches() async {

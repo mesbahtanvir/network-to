@@ -37,9 +37,9 @@ them.
   only if it's mutual." A non-mutual outcome never blames anyone.
 - Empty states explain and offer at most one action. Sending nothing is treated as normal.
 - Errors must say what was saved, what was not, and what the member can do, and recoverable
-  failures must offer retry. Today most failures surface the backend's own message in a short
-  notice and only message sending offers retry; closing that gap is `NTInlineNotice` and
-  `NTOfflineState` in `docs/COMPONENT_STATE_SHEET.md`.
+  failures must offer retry. Every notice carries a kind that its symbol, tint, and text agree
+  on; an error names the action that did not happen and stays, with Retry, until the member
+  acts on it (`NTInlineNotice` and `NTOfflineState` in `docs/COMPONENT_STATE_SHEET.md`).
 
 ## 3. Make use of the periphery
 
@@ -91,9 +91,11 @@ Technology should degrade gracefully and never leave a person stranded.
   foreground refresh is the recovery path. It does not yet cache the last snapshot for an
   offline launch.
 - Every network action must have an offline state that says whether it was saved, queued, or
-  not submitted, and offers retry. Today only message sending has one (Not sent · Retry);
-  introduction responses roll back and re-enable the buttons; availability, preference, meetup,
-  feedback, and safety saves show the error but keep the optimistic state.
+  not submitted, and offers retry. Message sending keeps its per-message Not sent · Retry;
+  introduction responses roll back and re-enable the buttons; availability, preference, block,
+  unblock, Connection, and conversation saves restore the previous state on failure and offer
+  Retry; a coffee plan and private feedback apply only once the backend holds them; profile
+  edits stay on screen with a retrying save.
 - A company mark that cannot load falls back to the company monogram in the same footprint. A
   notification that cannot be delivered leaves the in-app state intact. A missing configuration on the server records a
   failure instead of crashing.
@@ -116,10 +118,11 @@ The right amount of technology is the least that solves the problem.
 Technology should fit the norms of the people using it, in the situations they are in.
 
 - Interest is private until it is mutual, because that is how professionals actually behave.
-- Passing is easy and socially inexpensive; the product never announces a Pass. (Today a member
-  who answers Interested after the other person has already passed is told at once that the
-  introduction did not work out; making that moment indistinguishable from waiting is a
-  recorded follow-up in the constitution's migration plan.)
+- Passing is easy and socially inexpensive; the product never announces a Pass. A Pass changes
+  nothing the other member can see: their introduction stays open with its original expiry, an
+  Interested answer after the Pass waits exactly as it would otherwise, and the introduction
+  ends for them only at its expiry, with the same words at the same moment as one nobody
+  answered.
 - Verification means control of a company email and says so; the product never implies
   employer endorsement.
 - Safety actions (report, block, end) are always reachable, never prominent, and never

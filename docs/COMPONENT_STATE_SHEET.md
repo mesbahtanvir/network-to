@@ -618,21 +618,27 @@ Never a sheet, alert, badge, sound, or animation; never shown beside an undecide
 
 ### `NTInlineNotice`
 
-Variants:
+The single notice surface, rendered by `MainTabView` at the top of the screen from the store's one `notice`; a newer notice replaces the older. The feedback sheet renders the same component inline for its own refused submission.
 
-- information;
-- success;
-- warning;
-- error;
-- private;
-- safety.
+Variants (the symbol, tint, and text always agree):
+
+- success: `checkmark.circle.fill` in `success`; only after the backend confirms, or at once for a change kept only on the phone;
+- information: `info.circle.fill` in `accent`; something worth knowing that asks nothing of the member (a failed refresh, a membership gate);
+- error: `exclamationmark.circle.fill` in `destructive`; the member's own action that did not happen, named plainly ("Introduction preferences weren’t saved.").
 
 Anatomy:
 
 - semantic symbol;
-- title where needed;
-- one concise explanation;
-- optional one action.
+- one sentence in `textPrimary`;
+- for errors, **Retry** when the action can be repeated with the same values, and **Dismiss**; each target at least 44 pt.
+
+States:
+
+- success and information dismiss themselves after about two seconds;
+- an error stays until dismissed, retried, or replaced; Retry runs the failed action once, and the action raises its own notice if it fails again;
+- sign-out and account deletion clear the notice and its retry.
+
+The text is announced to VoiceOver when the notice appears; the entrance honours Reduce Motion.
 
 ### `NTLoadingState`
 
@@ -646,15 +652,16 @@ Rules:
 
 ### `NTOfflineState`
 
-Required for:
+Every action that reaches the backend states whether it was saved, queued, or not submitted, and offers retry:
 
-- introduction response submission;
-- Available Today activation;
-- work-email verification;
-- sending messages;
-- meetup feedback.
+- introduction responses roll back, re-enable the buttons, and raise the backend's message as an error;
+- Available Today (set and clear), introduction and meeting preferences, unblock, block, remove Connection, and end conversation apply at once, restore the previous state when the save fails, and raise an error with **Retry**;
+- a coffee plan and private feedback apply only after the backend confirms: the plan raises an error with **Retry**; the feedback sheet stays open with an inline error and **Retry**;
+- profile saves keep the edited text on screen and raise an error with **Retry**;
+- messages keep their per-message **Not sent · Retry**;
+- work-email verification and reports keep their inline error in their sheet.
 
-Every offline state must state whether an action was saved locally, queued, or not submitted.
+Nothing is queued for later delivery; a failed save is reported and retried by the member. An offline launch does not yet show the last snapshot (recorded in `docs/DESIGN_PHILOSOPHY.md`).
 
 ### `NTSafetyMenu`
 
@@ -674,11 +681,14 @@ Block and Report require clear consequence text. Report categories follow the PR
 | --- | --- | --- | --- | --- | --- |
 | Work email | Populated | Sending code | Code sent | Invalid/ineligible/domain review | Account ineligible |
 | OTP | Complete | Verifying | Company verified | Invalid/expired/resend | Verification cancelled |
-| Introduction | Undecided | Submitting response | Private waiting | Offline retry | Expired/closed |
-| Available Today | Off | Activating | Active until exact time | Activation retry | Expired/turned off |
+| Introduction | Undecided | Submitting response | Private waiting; ends only at expiry, mutual interest, or a block | Buttons return with the backend's message | Ended at expiry: one state, shown once, whatever ended it |
+| Available Today | Off | Saving, shown active at once | Active until exact time | Restored to the previous state; "Availability wasn’t saved." with Retry | Expired/turned off |
+| Preference and safety saves | Saved values | Saving, shown at once | Success notice after confirmation | Restored to the previous state; error notice with Retry | n/a |
+| Coffee plan | Coordinating | Sending | Plan shown once saved | "Coffee plan wasn’t sent." with Retry | Conversation ended |
 | Mutual interest | Notification ready | Opening chat | Conversation active | Retry loading conversation | Member restricted |
 | Message | Draft | Sending | Sent | Failed/retry | Conversation ended/blocked |
-| Meetup feedback | Unselected | Submitting | Recorded/Connection created | Retry | Dismissed/expired prompt |
+| Meetup feedback | Unselected | Submitting; sheet stays open | Recorded/Connection created only after confirmation | Sheet stays open with "Feedback wasn’t submitted." and Retry | Dismissed/expired prompt |
+| Refresh | Last snapshot | Refreshing | State replaced | "Couldn’t refresh right now." as information | Session invalid; sign-in shown |
 | Notification invitation | Card with two choices | Phone dialog open | Allowed; card gone; silent registration | Registration retried silently on next activation | Declined or Not now; card gone |
 | Tapped notification | Launch screen or current screen | Session restore and refresh | Today or the referenced conversation | Refresh failed; destination in last known state | Session invalid; sign-in shown; route discarded |
 

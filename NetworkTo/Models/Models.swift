@@ -280,6 +280,31 @@ enum CompanyDomainDecision: Equatable, Sendable {
     case ineligible(reason: String)
 }
 
+/// The app's single message channel. A notice always carries its kind, so the symbol never
+/// contradicts the text; errors persist until dismissed, the other kinds dismiss themselves.
+struct AppNotice: Equatable, Sendable, Identifiable {
+    enum Kind: Sendable {
+        case success
+        case information
+        case error
+    }
+
+    let id: UUID
+    let kind: Kind
+    let text: String
+    let canRetry: Bool
+
+    init(kind: Kind, text: String, canRetry: Bool = false, id: UUID = UUID()) {
+        self.id = id
+        self.kind = kind
+        self.text = text
+        self.canRetry = canRetry
+    }
+
+    /// Only a member's own failed action stays until they act on it.
+    var persists: Bool { kind == .error }
+}
+
 enum MockServiceError: LocalizedError, Equatable, Sendable {
     case offline
     case invalidCode

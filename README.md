@@ -9,7 +9,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - Calm magic-link work-email verification with automatic work-laptop-to-iPhone handoff
 - Résumé-first professional onboarding with real processing stages, item-by-item removal, and member-authored career direction
 - Today, Connections, Messages, and Profile experiences
-- Private Interested/Pass decisions and a mutual-interest conversation gate
+- Private Interested/Pass decisions and a mutual-interest conversation gate; a Pass changes nothing the other member can see, and their introduction ends only at its expiry
 - 1:1 meetup planning, private feedback, and opt-in connection creation
 - Temporary coarse-grained availability
 - Reporting, blocking, ending conversations, and account deletion
@@ -21,6 +21,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - Transactional profile setup, retry-safe messaging, and a restart-safe cross-device magic-link flow
 - On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting of identity, role context, expertise, history, education, and demonstrated experience through a rate-limited Supabase Edge Function
 - Deterministic mock data for previews and unit tests
+- Honest states: one notice channel whose success, information, and error kinds always match their symbol, errors that stay with Retry, and every save either restored on failure or applied only after the backend confirms
 
 The membership product identifier is `com.mesbahtanvir.networkto.monthly`. The local Xcode scheme uses `NetworkTo/Products.storekit` at $9.99/month for simulator testing; production always displays Apple’s localized App Store price.
 

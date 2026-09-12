@@ -96,7 +96,6 @@ struct MembershipView: View {
                     Task {
                         if let signedTransaction = await subscriptions.purchase(appAccountToken: store.member.id) {
                             await store.synchronizeAppStoreTransaction(signedTransaction)
-                            store.transientMessage = "Membership activated"
                         }
                     }
                 } label: {

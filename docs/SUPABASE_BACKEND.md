@@ -53,11 +53,11 @@ Every exposed table has RLS enabled. Direct profile access is self-only. The oth
 High-impact transitions use `security definer` database functions with an empty `search_path` and explicit grants:
 
 - `save_professional_profile` writes a profile and its professional history in one transaction, so onboarding cannot leave a partially saved account.
-- `respond_to_introduction` records a decision once and atomically creates a conversation only when both members are interested.
+- `respond_to_introduction` records a decision once and atomically creates a conversation only when both members are interested. A Pass is private: it hides the introduction from the member who passed and frees them for matching at their cadence, while the introduction stays open for the other member, with its original expiry, until it expires, becomes mutual, or is blocked; it closes at once only when both members have passed. An Interested response after the other member's Pass returns the same waiting outcome as one nobody has answered.
 - `send_message` verifies conversation participation and uses a client-generated UUID so retries cannot create duplicate messages.
 - `create_meetup` and the feedback functions enforce conversation participation.
 - `block_member`, `end_conversation`, and `submit_member_report` validate an existing relationship before changing state.
-- The private matching job first limits candidates to the same normalized city, then requires reciprocal professional relevance and overlapping meeting preferences while respecting each member's exact cadence, blocks, pauses, and repeat-introduction constraints. Cross-company and cross-industry introductions receive a ranking bonus.
+- The private matching job first limits candidates to the same normalized city, then requires reciprocal professional relevance and overlapping meeting preferences while respecting each member's exact cadence, blocks, pauses, repeat-introduction constraints, and one active introduction per member (an introduction a member passed on no longer counts as theirs). Cross-company and cross-industry introductions receive a ranking bonus.
 - Matching requires both members to have an active free month or verified subscription. Expiry pauses only future matching; conversations and connections remain accessible.
 
 ## Authentication

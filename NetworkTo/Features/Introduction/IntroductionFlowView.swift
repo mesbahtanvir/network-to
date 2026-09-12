@@ -307,7 +307,7 @@ private struct PassFeedbackView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Skip") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Submit") {
-                        store.transientMessage = "Feedback saved privately"
+                        store.presentSuccess("Feedback saved privately")
                         dismiss()
                     }
                     .disabled(reason == nil)
