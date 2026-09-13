@@ -101,7 +101,7 @@ The bottom navigation is fixed by the PRD.
 | **Messages** | Coordinate meetings after mutual interest | Conversation list, conversation, empty state |
 | **Profile** | Maintain professional context, preferences, availability, privacy, and account settings | Profile, editing, verification, preferences, safety |
 
-There is no separate notification centre in V1. Relevant notifications deep-link to the appropriate Today, Messages, or Profile state.
+There is no separate notification centre in V1. A tapped notification opens Today (introduction ready) or the referenced conversation in Messages (mutual interest, new message, meeting reminder, feedback due). Permission is asked once, from a card at the top of Today after onboarding; delivery preferences stay in iPhone Settings.
 
 ## 5. Screen inventory
 
@@ -128,11 +128,11 @@ Account context is progressive. O-02 through O-06 use short, focused steps and r
 
 | ID | Screen | Purpose | Required states |
 | --- | --- | --- | --- |
-| T-01 | Today — searching | Communicate that quality takes time | Active search, profile needs work, paused |
+| T-01 | Today — searching | Communicate that quality takes time | Active search, profile needs work, paused, notification invitation |
 | T-02 | Today — introduction ready | Announce one new introduction without showing a feed | New, seen |
 | T-03 | Introduction | Explain identity, reciprocal value, trust, and practical meeting context | Default, Available Today context |
 | T-04 | Pass confirmation | Make passing clear but inexpensive | Default, optional private feedback later |
-| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, introduction expired, non-mutual outcome |
+| T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, ended at its expiry (one state, shown once, whatever ended it), notification invitation |
 | T-06 | Mutual interest | Celebrate lightly and open the conversation | Default |
 | T-07 | Available Today | Set temporary area and broad time window | Off, configuring, active, expiring, expired |
 | T-08 | Upcoming meetup | Show the meeting context when one is known from conversation | Proposed, upcoming, changed |
@@ -168,7 +168,7 @@ A person should become a **Connection** only after the relationship progressed b
 | P-04 | Meeting preferences | Maintain work areas, formats, and usual availability | Default, customized |
 | P-05 | Work verification | Show verified company and reverification flow | Verified, expiring, changed company, pending |
 | P-06 | Privacy and safety | Explain inclusive introduction design and maintain blocked members and community standards | Default, blocked member present |
-| P-07 | Notification settings handoff | Open the app-specific notification page in iPhone Settings; do not recreate delivery controls in-app | Native Settings available, unavailable fallback |
+| P-07 | Notification settings handoff | Reflect the phone's permission status; present the phone's dialog while it has never been asked, otherwise open the app-specific notification page in iPhone Settings; do not recreate delivery controls in-app | Never asked, on, off, native Settings available, unavailable fallback |
 | P-08 | Account | Support sign-out and account deletion | Default, destructive confirmation |
 
 ## 6. Core flows
@@ -181,7 +181,7 @@ Returning members follow `Welcome → Sign in → Work email → Verify → Toda
 
 - Consumer email domains are rejected with a direct explanation.
 - Unknown company domains enter review; the UI must not pretend that validation is instant.
-- Public and private fields are visibly distinguished during setup.
+- Introduction-visible and private fields are visibly distinguished during setup.
 - Optional résumé extraction prefills only supported facts: identity, role scope, explicit current/latest-role focus, experience range, expertise, work history, education, and demonstrated experience. The PDF remains on-device and contact details are redacted before bounded text is processed.
 - The draft remains separate from the profile until confirmation. Every inferred item has a direct remove action, and the member can discard the draft entirely.
 - Résumé users skip factual screens that are already complete. Professional ambition remains required and member-authored; growth themes, immediate perspective, help format, and contribution boundaries can be confirmed or added with low-input controls.
@@ -194,12 +194,15 @@ If **Pass**:
 
 `Pass → Neutral confirmation → Today searching`
 
+- A Pass is private. The introduction stays open for the other member with its original expiry, the member who passed never sees it again, and they may receive a new introduction at their normal cadence.
+
 If **Interested**:
 
 `Interested → Private waiting state`
 
 - The waiting state never says or implies that the other person has rejected the member.
-- If the introduction does not become mutual, use: **This introduction didn’t work out. We’ll keep looking for someone worthwhile.**
+- The wait ends only at the introduction's expiry (seven days from creation), through mutual interest, or through a block. The other member's Pass changes nothing the waiting member can see: not the copy, not the expiry, not the timing.
+- If the introduction does not become mutual, use: **This introduction didn’t work out. We’ll keep looking for someone worthwhile.** It appears once, at the same moment whether the other member passed or never answered, and **Continue** returns to Today searching.
 
 ### 6.3 Mutual interest to coffee
 
@@ -242,9 +245,9 @@ This is the most important decision surface in V1. It is a full screen, not a ca
 8. Trust/privacy clarification where needed.
 9. **Pass** and **Interested** actions.
 
-### Proposed photography policy
+### Photography policy
 
-Do not show a profile photo on the introduction decision screen in V1. Use a restrained name monogram or verified-company mark. This keeps professional substance dominant and materially reduces dating-style visual judgment.
+Adopted 2026-09-11 (`docs/PRODUCT_DEFINITION.md`, `docs/DESIGN_PHILOSOPHY.md`): no profile photo appears before mutual interest. The introduction decision screen uses the name monogram for the person and the company mark for the verified company. This keeps professional substance dominant and materially reduces dating-style visual judgment.
 
 After mutual interest, an optional small profile photo may appear in chat and connection detail if product testing shows that it improves meeting trust. This remains a design decision to validate.
 
@@ -307,6 +310,10 @@ Use when there is no introduction above the quality threshold.
 - Provide **Change** and **Turn off**.
 - Never display a map of nearby members.
 
+### Notification invitation
+
+Shown once, at the top of Today, only in the searching or waiting-privately state, only while the phone has never been asked, and never again after **Not now**. It names the five reasons for a notification, says delivery is managed in iPhone Settings, and offers **Turn on notifications** and **Not now**. It is a card, not a sheet or alert; Today stays usable beneath it, and it never appears beside an undecided introduction.
+
 ## 9. Messaging design
 
 Messaging is a practical coordination tool.
@@ -344,6 +351,8 @@ The interface should feel like being thoughtfully introduced by someone who know
 | `success` | `#2E7350` | `#6BC18F` | Mutual interest and confirmed states |
 | `warning` | `#8A641D` | `#E0B55C` | Expiry or work-email attention |
 | `destructive` | `#B42332` | `#FF7A88` | Safety and account actions |
+| `company-mark-backing` | `#F3EEE6` | `#F3EEE6` | Opaque tile behind every company mark and company monogram, the same in both appearances |
+| `company-mark-glyph` | `#354C3D` | `#354C3D` | Company monogram characters on the mark tile |
 
 Botanical green carries primary action and quiet trust. Clay appears around coffee, introductions, and moments of human momentum. Verification stays visually secondary: trust should be present, not the personality of the product.
 
@@ -414,7 +423,15 @@ Avoid sparkles as a generic AI signifier and never use hearts for interest.
 
 ### Verified company line
 
-Role, company name, and a verification seal with accessible text: **Work email verified**. A disclosure explains exactly what verification means.
+Verification seal, then the company mark (or company monogram) immediately before the company name, then **Work email verified**. A disclosure explains exactly what verification means. The mark and monogram are decorative; the company name stays the accessible text.
+
+### Company mark
+
+A square tile the height of the text line it sits in, drawn on `company-mark-backing` with one-eighth inner padding and a 25% continuous corner radius, holding the company's own published icon fitted without distortion or recolouring. When no mark is available (none published, withheld, not approved, not yet downloaded, offline, or failed) the same tile shows the company monogram in `company-mark-glyph`: at most two uppercase characters from the first letter or digit of the first two words of the company name, skipping punctuation-only words and "and", "of", "the". A mark replaces a monogram on the next redraw with no animation. Marks appear beside the verified company name on the introduction and mutual-interest identity rows, in conversation rows and the conversation header, in connection rows and detail, and on the member's own profile identity row; never in onboarding, the Edit profile Company field, the "Work email verified" settings row, or beside typed experience history.
+
+### Notification invitation
+
+A card at the top of Today with the heading **When network.to will notify you**, one sentence naming the five reasons and one stating that delivery is managed in iPhone Settings, then **Turn on notifications** (filled) and **Not now** (secondary) with equal targets. No symbol, no motion, no countdown. Shown until answered; **Not now** is remembered per member on the phone and cleared only after account deletion. Implemented as `NTNotificationInviteCard`.
 
 ### Professional topic label
 
@@ -443,11 +460,15 @@ One secondary **Pass** button and one filled **Interested** button. Both have te
 
 ### Private waiting state
 
-A finite confirmation state that explains mutual gating and avoids status checking pressure.
+A finite confirmation state that explains mutual gating and avoids status checking pressure. It ends only at the introduction's expiry, at mutual interest, or at a block, never at the moment of the other member's Pass.
+
+### Notices
+
+One notice at a time, at the top of the screen, with a kind that its symbol, tint, and text all agree on. Success (checkmark) and information (info) leave on their own after about two seconds. An error (exclamation) names the action that did not happen ("Availability wasn’t saved.") and stays until the member dismisses it, retries it, or a newer notice replaces it; Retry repeats the action with the same values. A success notice appears only after the backend confirms the action, or at once for a change kept only on the phone. A refresh that fails is information, never an error, because no member action waits on it.
 
 ### Professional identity row
 
-Name, role, verified company, and last relevant context. Use in Messages and Connections; do not add follower counts or public activity.
+Name, role, verified company with its company mark, and last relevant context. Use in Messages and Connections; do not add follower counts or public activity.
 
 ### Conversation context strip
 
@@ -465,17 +486,24 @@ One truthful explanation and, when useful, one action. Today must be comfortable
 
 ### Required terminology
 
+This is the single canonical vocabulary; the constitution and the product definition refer to it.
+
 Use:
 
 - Introduction
 - Interested
+- Pass
+- Mutual interest
+- Conversation
 - Connection
 - Meet
-- Professional interests
+- Member (never user)
+- Professional topic
 - Available today
 - Why you should meet
 - Why they may want to meet you
 - Verified company / Work email verified
+- Company mark and company monogram
 
 Avoid:
 
@@ -511,7 +539,7 @@ Avoid:
 
 ## 13. Privacy, trust, and safety UI
 
-- Public, introduction-only, and private fields are labeled wherever the distinction matters.
+- Introduction, coarse-only, only-you, and private fields are labeled wherever the distinction matters.
 - Gender is not requested, stored, exposed, or used to determine introduction eligibility or ranking.
 - The product does not offer gender-based introduction pools; safety controls apply consistently to every member.
 - Introduction responses are inaccessible to the other member until mutuality is established.
@@ -550,7 +578,7 @@ The product direction is fixed by the PRD. The UI becomes **Locked 1.0** when th
 | Available Today | Broad area + time window + automatic expiry | PRD locked |
 | Visual character | Warm clarity; human intention; quiet trust; native iOS | Revised in all prototypes; awaiting approval |
 | Colour system | Warm paper, botanical green, restrained clay meeting accent | Revised in all prototypes; awaiting approval |
-| Introduction photography | No photo before mutual interest | Proposed |
+| Introduction photography | No photo before mutual interest | Adopted 2026-09-11 (PRODUCT_DEFINITION.md) |
 | Introduction hierarchy | Identity → reciprocal value → practical overlap → actions | Proposed |
 | Today state designs | Section 8 | Proposed |
 | Screen inventory | Section 5 | Proposed |
@@ -579,8 +607,7 @@ The product direction is fixed by the PRD. The UI becomes **Locked 1.0** when th
 
 ### Remaining product-owner design decisions
 
-1. Approve or reject the proposed no-photo introduction screen.
-2. Approve or redirect the revised warm-paper, botanical-green, and clay visual execution.
-3. Choose the final product name and logotype treatment if `network.to` is a repository name rather than the customer-facing brand.
+1. Approve or redirect the revised warm-paper, botanical-green, and clay visual execution.
+2. Choose the final product name and logotype treatment if `network.to` is a repository name rather than the customer-facing brand.
 
 Language rule: use **meet** for the general relationship outcome and **coffee** when describing the concrete in-person format, availability, or plan.

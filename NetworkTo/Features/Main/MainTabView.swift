@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $store.selectedTab) {
@@ -23,23 +24,29 @@ struct MainTabView: View {
                 .tag(MainTab.profile)
         }
         .overlay(alignment: .top) {
-            if let message = store.transientMessage {
-                Label(message, systemImage: "checkmark.circle.fill")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(NTColor.textPrimary)
-                    .padding(.horizontal, NTSpacing.md)
-                    .padding(.vertical, NTSpacing.sm)
-                    .background(.regularMaterial)
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
-                    .padding(.top, NTSpacing.sm)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .task(id: message) {
-                        try? await Task.sleep(for: .seconds(2.2))
-                        if store.transientMessage == message { store.transientMessage = nil }
-                    }
+            if let notice = store.notice {
+                NTInlineNotice(
+                    notice: notice,
+                    dismiss: { store.dismissNotice(id: notice.id) },
+                    retry: retryAction(for: notice)
+                )
+                .padding(.horizontal, NTSpacing.md)
+                .padding(.top, NTSpacing.sm)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                .task(id: notice.id) {
+                    // Only a notice that asks nothing of the member leaves on its own.
+                    guard !notice.persists else { return }
+                    try? await Task.sleep(for: .seconds(2.2))
+                    guard !Task.isCancelled else { return }
+                    store.dismissNotice(id: notice.id)
+                }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: store.transientMessage)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: store.notice)
+    }
+
+    private func retryAction(for notice: AppNotice) -> (() -> Void)? {
+        guard notice.canRetry else { return nil }
+        return { store.retryFailedAction() }
     }
 }

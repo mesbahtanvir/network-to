@@ -25,6 +25,7 @@ struct IntroductionFlowView: View {
         .ntScreenBackground()
         .navigationTitle("Introduction")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { store.didViewNotificationItem(.introduction(store.introduction.id)) }
         .safeAreaInset(edge: .bottom) {
             if store.phase == .ready {
                 responseActions
@@ -202,8 +203,10 @@ struct IntroductionFlowView: View {
                 .font(.body)
                 .foregroundStyle(NTColor.textSecondary)
                 .multilineTextAlignment(.center)
-            ProgressView("Waiting for a reciprocal response…")
-                .tint(NTColor.accent)
+            Text("Nothing to do here. We’ll let you know only if it becomes mutual.")
+                .font(.footnote)
+                .foregroundStyle(NTColor.textSecondary)
+                .multilineTextAlignment(.center)
                 .padding(.top, NTSpacing.sm)
         }
         .frame(maxWidth: .infinity)
@@ -304,7 +307,7 @@ private struct PassFeedbackView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Skip") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Submit") {
-                        store.transientMessage = "Feedback saved privately"
+                        store.presentSuccess("Feedback saved privately")
                         dismiss()
                     }
                     .disabled(reason == nil)

@@ -131,6 +131,40 @@ struct ProfileView: View {
         .ntSurface()
     }
 
+    /// Delivery preferences live in iPhone Settings. The row reflects the phone's status,
+    /// presents the phone's dialog while it has never been asked, and otherwise opens Settings.
+    private var notificationSubtitle: String {
+        switch store.notificationAuthorization {
+        case .unknown: "Managed in iPhone Settings"
+        case .notDetermined: "Not set up yet"
+        case .denied: "Off · Turn on in iPhone Settings"
+        case .authorized: "On · Managed in iPhone Settings"
+        }
+    }
+
+    private func handleNotificationsRow() {
+        Task {
+            await store.refreshNotificationAuthorization()
+            if store.notificationAuthorization.canPrompt {
+                await store.requestNotificationAuthorization()
+            } else {
+                openNotificationSettings()
+            }
+        }
+    }
+
+    private func openNotificationSettings() {
+        let appStore = store
+        guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else {
+            appStore.presentInformation(AppStore.notificationSettingsFallbackNotice)
+            return
+        }
+        openURL(url) { accepted in
+            guard !accepted else { return }
+            Task { @MainActor in appStore.presentInformation(AppStore.notificationSettingsFallbackNotice) }
+        }
+    }
+
     private var accountCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeading("Account and privacy", "Trust controls stay understandable and close at hand.")
@@ -150,13 +184,16 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             Divider().padding(.leading, 44)
             Button {
-                guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
-                openURL(url)
+                handleNotificationsRow()
             } label: {
-                settingsRow("bell", "Notifications", "Managed in iPhone Settings", showChevron: true)
+                settingsRow("bell", "Notifications", notificationSubtitle, showChevron: true)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Opens the native iPhone notification settings for network.to")
+            .accessibilityHint(
+                store.notificationAuthorization.canPrompt
+                    ? "Asks iPhone for permission to notify you"
+                    : "Opens the native iPhone notification settings for network.to"
+            )
             Divider().padding(.leading, 44)
             NavigationLink {
                 AccountSettingsView()

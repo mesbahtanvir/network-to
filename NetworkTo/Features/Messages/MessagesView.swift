@@ -4,7 +4,7 @@ struct MessagesView: View {
     @EnvironmentObject private var store: AppStore
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $store.messagesPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: NTSpacing.xl) {
                     Text("For making plans, not collecting chats.")
@@ -22,6 +22,7 @@ struct MessagesView: View {
             }
             .ntScreenBackground()
             .navigationTitle("Messages")
+            .navigationDestination(for: MessagesDestination.self) { _ in ConversationView() }
         }
     }
 
@@ -72,19 +73,20 @@ struct MessagesView: View {
     }
 
     private func conversationCard(_ conversation: Conversation) -> some View {
-        NavigationLink {
-            ConversationView()
-        } label: {
+        NavigationLink(value: MessagesDestination.conversation(conversation.id)) {
             VStack(alignment: .leading, spacing: NTSpacing.md) {
                 HStack(alignment: .top, spacing: NTSpacing.md) {
                     NTMonogram(initials: conversation.person.initials, size: 52)
                     VStack(alignment: .leading, spacing: NTSpacing.xxs) {
                         Text(conversation.person.name)
                             .font(.title3.weight(.semibold))
-                        Text("\(conversation.person.role) at \(conversation.person.company)")
-                            .font(.subheadline)
-                            .foregroundStyle(NTColor.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        NTRoleAndCompanyLine(
+                            role: conversation.person.role,
+                            company: conversation.person.company,
+                            mark: conversation.person.displayedCompanyMark
+                        )
+                        .foregroundStyle(NTColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .layoutPriority(1)
                     Spacer(minLength: 0)
@@ -198,6 +200,25 @@ struct ConversationView: View {
         .navigationTitle(store.conversation?.person.name ?? "Conversation")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                if let person = store.conversation?.person {
+                    VStack(spacing: 0) {
+                        Text(person.name)
+                            .font(.headline)
+                            .lineLimit(1)
+                        NTRoleAndCompanyLine(
+                            role: person.role,
+                            company: person.company,
+                            mark: person.displayedCompanyMark,
+                            textStyle: .caption
+                        )
+                        .foregroundStyle(NTColor.textSecondary)
+                        .lineLimit(1)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(person.name). \(person.role) at \(person.company)")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button("Report", systemImage: "exclamationmark.bubble") { showingReport = true }
@@ -209,7 +230,12 @@ struct ConversationView: View {
                 .accessibilityLabel("Conversation options")
             }
         }
-        .onAppear { store.openConversation() }
+        .onAppear {
+            store.openConversation()
+            if let id = store.conversation?.id {
+                store.didViewNotificationItem(.conversation(id))
+            }
+        }
         .sheet(isPresented: $showingFeedback) {
             MeetupFeedbackView()
                 .presentationDetents([.large])
@@ -367,6 +393,9 @@ private struct MeetupFeedbackView: View {
     @State private var outcome: MeetupOutcome?
     @State private var stayConnected = true
     @State private var note = ""
+    @State private var isSubmitting = false
+    /// The sheet's own record of a refused submission; nothing else on the phone changes.
+    @State private var failure: AppNotice?
 
     var body: some View {
         NavigationStack {
@@ -415,6 +444,13 @@ private struct MeetupFeedbackView: View {
                             RoundedRectangle(cornerRadius: NTRadius.field, style: .continuous)
                                 .stroke(NTColor.separator, lineWidth: 1)
                         }
+                    if let failure {
+                        NTInlineNotice(
+                            notice: failure,
+                            dismiss: { self.failure = nil },
+                            retry: { submit() }
+                        )
+                    }
                 }
                 .padding(NTSpacing.lg)
             }
@@ -422,16 +458,27 @@ private struct MeetupFeedbackView: View {
             .navigationTitle("Private feedback")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                Button("Submit feedback") {
-                    guard let outcome else { return }
-                    store.recordFeedback(outcome, stayConnected: stayConnected)
-                    dismiss()
-                }
-                .buttonStyle(NTPrimaryButtonStyle())
-                .disabled(outcome == nil)
-                .padding(.horizontal, NTSpacing.lg)
-                .padding(.vertical, NTSpacing.sm)
-                .background(.ultraThinMaterial)
+                Button(failure == nil ? "Submit feedback" : "Retry") { submit() }
+                    .buttonStyle(NTPrimaryButtonStyle())
+                    .disabled(outcome == nil || isSubmitting)
+                    .padding(.horizontal, NTSpacing.lg)
+                    .padding(.vertical, NTSpacing.sm)
+                    .background(.ultraThinMaterial)
+            }
+        }
+    }
+
+    /// Nothing is recorded until the backend holds the feedback, and the sheet closes only then.
+    private func submit() {
+        guard let outcome, !isSubmitting else { return }
+        isSubmitting = true
+        Task {
+            let submitted = await store.recordFeedback(outcome, stayConnected: stayConnected)
+            isSubmitting = false
+            if submitted {
+                dismiss()
+            } else {
+                failure = AppNotice(kind: .error, text: "Feedback wasn’t submitted.", canRetry: true)
             }
         }
     }

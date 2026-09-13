@@ -686,7 +686,6 @@ private struct ResumeImportFlowView: View {
                 Image(systemName: "doc.text.magnifyingglass")
                     .font(.system(size: 42, weight: .medium))
                     .foregroundStyle(NTColor.accent)
-                    .symbolEffect(.pulse, options: reduceMotion ? .nonRepeating : .repeating)
             }
             .frame(maxWidth: .infinity)
 

@@ -34,6 +34,8 @@ This document defines the reusable SwiftUI-level components and states required 
 | `NTColor.success` | `#2E7350` | `#6BC18F` | Verified/mutual/complete |
 | `NTColor.warning` | `#8A641D` | `#E0B55C` | Expiry/attention |
 | `NTColor.destructive` | `#B42332` | `#FF7A88` | Safety/destructive action |
+| `NTColor.companyMarkBacking` | `#F3EEE6` | `#F3EEE6` | Tile behind company marks and monograms (fixed in both appearances) |
+| `NTColor.companyMarkGlyph` | `#354C3D` | `#354C3D` | Company monogram characters |
 
 Meaning is always paired with text or a symbol. Colour is never the only state indicator.
 
@@ -139,6 +141,7 @@ States:
 Anatomy:
 
 - `checkmark.seal.fill`;
+- `NTCompanyMark` (mark or company monogram) immediately before the company name;
 - company name or “Work email verified”;
 - disclosure action.
 
@@ -157,6 +160,27 @@ Accessibility:
 
 - VoiceOver reads the complete meaning, not only “verified.”
 - Seal is decorative when the adjacent text carries meaning.
+
+### `NTCompanyMark`
+
+Anatomy:
+
+- square tile the height of the accompanying text line, `NTColor.companyMarkBacking`, 25% continuous radius, one-eighth inner padding;
+- the company's published icon fitted inside, or the company monogram in `NTColor.companyMarkGlyph`.
+
+Placement: inline in the text it accompanies (`CompanyMarkTile.text` and `NTRoleAndCompanyLine`), immediately before the company name, so long names wrap as ordinary text at every Dynamic Type size and at 320 pt.
+
+States:
+
+- mark (a served mark this phone holds);
+- company monogram (no mark published, withheld, company not approved, affiliation not verified, not yet downloaded, offline, or failed).
+
+There is no loading, error, or retry state and no animation when a monogram becomes a mark. A mark is fetched only from the project's own storage host, cached in the Caches directory, and cleared at sign-out and after confirmed account deletion.
+
+Accessibility:
+
+- decorative (`accessibilityHidden`); the company name and existing verification wording carry the meaning;
+- monogram glyph on the tile 8.07:1; tile on the dark surface 14.02:1.
 
 ### `NTVisibilityLabel`
 
@@ -454,8 +478,10 @@ Anatomy:
 
 - back action;
 - name;
-- role and verified company;
+- role and verified company with `NTCompanyMark` before the company name (one line; the row and connection detail carry the full wrapping text);
 - conversation details/safety menu.
+
+Shipped as the principal toolbar item of `ConversationView`; the navigation title keeps the counterpart's name for the back button and VoiceOver reads name, role, and company once.
 
 ### `NTIntroductionContextStrip`
 
@@ -569,23 +595,50 @@ Copy:
 
 Supporting content may show introduction frequency and Available Today. It must not fill the screen with events, articles, or people to browse.
 
+### `NTNotificationInviteCard`
+
+The single explanation before the phone's permission dialog. Shown at the top of Today only while Today is searching or waiting privately, the member can receive introductions, the phone has never been asked, and the member has not chosen **Not now** on this phone.
+
+Anatomy:
+
+- **When network.to will notify you**;
+- one sentence naming the five reasons and one stating that delivery is managed in iPhone Settings;
+- **Turn on notifications** (primary) and **Not now** (secondary), equal targets of at least 44 pt.
+
+States:
+
+- resting: card visible with both choices;
+- in progress: the phone's dialog is open and the card is already gone;
+- success: allowed; nothing is shown and the phone is registered silently;
+- recoverable failure: registration failed; nothing is shown and it is retried on the next activation;
+- terminal: declined in the dialog or **Not now**; the card is gone for this member on this phone;
+- offline: the dialog works offline and registration is queued silently (a recorded deviation from the offline wording rule, because the member's own action completed on the phone).
+
+Never a sheet, alert, badge, sound, or animation; never shown beside an undecided introduction or a mutual-interest action.
+
 ### `NTInlineNotice`
 
-Variants:
+The single notice surface, rendered by `MainTabView` at the top of the screen from the store's one `notice`; a newer notice replaces the older. The feedback sheet renders the same component inline for its own refused submission.
 
-- information;
-- success;
-- warning;
-- error;
-- private;
-- safety.
+Variants (the symbol, tint, and text always agree):
+
+- success: `checkmark.circle.fill` in `success`; only after the backend confirms, or at once for a change kept only on the phone;
+- information: `info.circle.fill` in `accent`; something worth knowing that asks nothing of the member (a failed refresh, a membership gate);
+- error: `exclamationmark.circle.fill` in `destructive`; the member's own action that did not happen, named plainly ("Introduction preferences weren’t saved.").
 
 Anatomy:
 
 - semantic symbol;
-- title where needed;
-- one concise explanation;
-- optional one action.
+- one sentence in `textPrimary`;
+- for errors, **Retry** when the action can be repeated with the same values, and **Dismiss**; each target at least 44 pt.
+
+States:
+
+- success and information dismiss themselves after about two seconds;
+- an error stays until dismissed, retried, or replaced; Retry runs the failed action once, and the action raises its own notice if it fails again;
+- sign-out and account deletion clear the notice and its retry.
+
+The text is announced to VoiceOver when the notice appears; the entrance honours Reduce Motion.
 
 ### `NTLoadingState`
 
@@ -599,15 +652,16 @@ Rules:
 
 ### `NTOfflineState`
 
-Required for:
+Every action that reaches the backend states whether it was saved, queued, or not submitted, and offers retry:
 
-- introduction response submission;
-- Available Today activation;
-- work-email verification;
-- sending messages;
-- meetup feedback.
+- introduction responses roll back, re-enable the buttons, and raise the backend's message as an error;
+- Available Today (set and clear), introduction and meeting preferences, unblock, block, remove Connection, and end conversation apply at once, restore the previous state when the save fails, and raise an error with **Retry**;
+- a coffee plan and private feedback apply only after the backend confirms: the plan raises an error with **Retry**; the feedback sheet stays open with an inline error and **Retry**;
+- profile saves keep the edited text on screen and raise an error with **Retry**;
+- messages keep their per-message **Not sent · Retry**;
+- work-email verification and reports keep their inline error in their sheet.
 
-Every offline state must state whether an action was saved locally, queued, or not submitted.
+Nothing is queued for later delivery; a failed save is reported and retried by the member. An offline launch does not yet show the last snapshot (recorded in `docs/DESIGN_PHILOSOPHY.md`).
 
 ### `NTSafetyMenu`
 
@@ -627,11 +681,16 @@ Block and Report require clear consequence text. Report categories follow the PR
 | --- | --- | --- | --- | --- | --- |
 | Work email | Populated | Sending code | Code sent | Invalid/ineligible/domain review | Account ineligible |
 | OTP | Complete | Verifying | Company verified | Invalid/expired/resend | Verification cancelled |
-| Introduction | Undecided | Submitting response | Private waiting | Offline retry | Expired/closed |
-| Available Today | Off | Activating | Active until exact time | Activation retry | Expired/turned off |
+| Introduction | Undecided | Submitting response | Private waiting; ends only at expiry, mutual interest, or a block | Buttons return with the backend's message | Ended at expiry: one state, shown once, whatever ended it |
+| Available Today | Off | Saving, shown active at once | Active until exact time | Restored to the previous state; "Availability wasn’t saved." with Retry | Expired/turned off |
+| Preference and safety saves | Saved values | Saving, shown at once | Success notice after confirmation | Restored to the previous state; error notice with Retry | n/a |
+| Coffee plan | Coordinating | Sending | Plan shown once saved | "Coffee plan wasn’t sent." with Retry | Conversation ended |
 | Mutual interest | Notification ready | Opening chat | Conversation active | Retry loading conversation | Member restricted |
 | Message | Draft | Sending | Sent | Failed/retry | Conversation ended/blocked |
-| Meetup feedback | Unselected | Submitting | Recorded/Connection created | Retry | Dismissed/expired prompt |
+| Meetup feedback | Unselected | Submitting; sheet stays open | Recorded/Connection created only after confirmation | Sheet stays open with "Feedback wasn’t submitted." and Retry | Dismissed/expired prompt |
+| Refresh | Last snapshot | Refreshing | State replaced | "Couldn’t refresh right now." as information | Session invalid; sign-in shown |
+| Notification invitation | Card with two choices | Phone dialog open | Allowed; card gone; silent registration | Registration retried silently on next activation | Declined or Not now; card gone |
+| Tapped notification | Launch screen or current screen | Session restore and refresh | Today or the referenced conversation | Refresh failed; destination in last known state | Session invalid; sign-in shown; route discarded |
 
 ## 12. Accessibility contract
 

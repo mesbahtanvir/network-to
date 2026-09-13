@@ -62,6 +62,33 @@ struct MembershipStatus: Equatable, Sendable {
     }
 }
 
+/// Reference to a verified company's mark as served by the product backend. Keyed by the
+/// company, never by an email domain; the path is versioned so a refreshed mark is new content.
+struct CompanyMarkReference: Codable, Hashable, Sendable {
+    let key: String
+    let version: Int
+    let path: String
+}
+
+/// The company monogram shown wherever a company mark cannot be: at most two uppercase
+/// characters taken from the first letter or digit of the first two words of the company name.
+/// Words without a letter or digit and the joining words "and", "of", and "the" are skipped
+/// unless they are the only word.
+enum CompanyMonogram {
+    private static let joiningWords: Set<String> = ["and", "of", "the"]
+
+    static func characters(for companyName: String) -> String {
+        let words = companyName.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let initials: [(word: String, initial: Character)] = words.compactMap { word in
+            guard let initial = word.first(where: { $0.isLetter || $0.isNumber }) else { return nil }
+            return (word, initial)
+        }
+        let significant = initials.filter { !joiningWords.contains($0.word.lowercased().filter(\.isLetter)) }
+        let chosen = significant.isEmpty ? initials : significant
+        return chosen.prefix(2).map { String($0.initial).uppercased() }.joined()
+    }
+}
+
 struct ProfessionalProfile: Identifiable, Equatable, Sendable {
     let id: UUID
     var name: String
@@ -84,6 +111,12 @@ struct ProfessionalProfile: Identifiable, Equatable, Sendable {
     var professionalHistory: [ProfessionalExperience] = []
     var education: String = ""
     var resumeStatus: ResumeEnrichmentStatus = .notAdded
+    var companyMark: CompanyMarkReference? = nil
+
+    /// The mark a surface may show: only while the affiliation is verified (FR-028).
+    var displayedCompanyMark: CompanyMarkReference? {
+        isWorkEmailVerified ? companyMark : nil
+    }
 
     var initials: String {
         name.split(separator: " ")
@@ -247,6 +280,31 @@ enum CompanyDomainDecision: Equatable, Sendable {
     case ineligible(reason: String)
 }
 
+/// The app's single message channel. A notice always carries its kind, so the symbol never
+/// contradicts the text; errors persist until dismissed, the other kinds dismiss themselves.
+struct AppNotice: Equatable, Sendable, Identifiable {
+    enum Kind: Sendable {
+        case success
+        case information
+        case error
+    }
+
+    let id: UUID
+    let kind: Kind
+    let text: String
+    let canRetry: Bool
+
+    init(kind: Kind, text: String, canRetry: Bool = false, id: UUID = UUID()) {
+        self.id = id
+        self.kind = kind
+        self.text = text
+        self.canRetry = canRetry
+    }
+
+    /// Only a member's own failed action stays until they act on it.
+    var persists: Bool { kind == .error }
+}
+
 enum MockServiceError: LocalizedError, Equatable, Sendable {
     case offline
     case invalidCode
@@ -347,7 +405,8 @@ extension ProfessionalProfile {
         helpFormats: ["Compare approaches", "Share lessons learned"],
         contribution: "Practical experience building AI infrastructure from early stage to production.",
         contributionBoundaries: "Happy to share patterns and tradeoffs, but not confidential architecture or hiring referrals.",
-        isWorkEmailVerified: true
+        isWorkEmailVerified: true,
+        companyMark: CompanyMarkReference(key: "northstar-ai", version: 1, path: "northstar-ai/1.png")
     )
 
     static let currentMember = ProfessionalProfile(

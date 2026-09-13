@@ -46,25 +46,25 @@ final class AppStoreTests: XCTestCase {
         XCTAssertNil(store.conversation)
     }
 
-    func testConnectionRequiresMeetingAndOptIn() {
+    func testConnectionRequiresMeetingAndOptIn() async {
         let store = makeStore()
         store.respondInterested()
         store.confirmMutualInterest()
         store.requestFeedback()
 
-        store.recordFeedback(.good, stayConnected: true)
+        await store.recordFeedback(.good, stayConnected: true)
 
         XCTAssertEqual(store.phase, .connected)
         XCTAssertEqual(store.connections.count, 1)
     }
 
-    func testDidNotMeetNeverCreatesConnection() {
+    func testDidNotMeetNeverCreatesConnection() async {
         let store = makeStore()
         store.respondInterested()
         store.confirmMutualInterest()
         store.requestFeedback()
 
-        store.recordFeedback(.didNotMeet, stayConnected: true)
+        await store.recordFeedback(.didNotMeet, stayConnected: true)
 
         XCTAssertTrue(store.connections.isEmpty)
         XCTAssertEqual(store.phase, .searching)

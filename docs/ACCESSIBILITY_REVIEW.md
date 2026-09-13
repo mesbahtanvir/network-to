@@ -42,6 +42,10 @@ All primary text/action pairs exceed the WCAG AA 4.5:1 requirement for normal te
 | Primary-button foreground on `accent-strong`, dark | 9.37:1 |
 | Meeting-context text on meeting surface, light | 5.85:1 |
 | Meeting-context text on meeting surface, dark | 6.68:1 |
+| `company-mark-glyph` on `company-mark-backing`, both appearances | 8.07:1 |
+| `company-mark-backing` on `surface`, dark (non-text, ≥ 3:1 required) | 14.02:1 |
+
+Company marks and company monograms are decorative (`accessibilityHidden`); the company name and the verification wording remain the accessible text, so no ratio is required for the tile on the light surface. The tile is the height of its text line at every Dynamic Type size, including accessibility sizes, and wraps inline with the text at 320 pt.
 
 ## 4. Interaction regression evidence
 
@@ -57,6 +61,7 @@ All primary text/action pairs exceed the WCAG AA 4.5:1 requirement for normal te
 The SwiftUI implementation must still be tested on device or Simulator for:
 
 - VoiceOver reading order and custom action names;
+- the notification invitation card on Today: first in the reading order while it is showing, both buttons announced with label and hint, no truncation at the largest accessibility text size at 320 pt, nothing animating;
 - Dynamic Type through the largest accessibility sizes;
 - Bold Text, Button Shapes, Differentiate Without Colour, and Increased Contrast;
 - Reduce Motion and Reduce Transparency;

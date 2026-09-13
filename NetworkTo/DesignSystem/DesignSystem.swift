@@ -15,6 +15,13 @@ enum NTColor {
     static let warning = dynamic(light: 0x8A641D, dark: 0xE0B55C)
     static let destructive = dynamic(light: 0xB42332, dark: 0xFF7A88)
 
+    /// Company marks sit on the same opaque light neutral tile in both appearances so icons
+    /// drawn for light backgrounds stay visible in dark appearance (glyph on backing 8.1:1).
+    static let companyMarkBackingUIColor = UIColor(hex: 0xF3EEE6)
+    static let companyMarkGlyphUIColor = UIColor(hex: 0x354C3D)
+    static let companyMarkBacking = Color(uiColor: companyMarkBackingUIColor)
+    static let companyMarkGlyph = Color(uiColor: companyMarkGlyphUIColor)
+
     private static func dynamic(light: UInt32, dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in
             UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)

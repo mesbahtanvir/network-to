@@ -1,18 +1,47 @@
 import Foundation
 
 actor MockBackendService: BackendService {
-    nonisolated let isLive = false
+    /// Tests may flag the mock as live to exercise the live-only paths (session restore, device
+    /// registration) deterministically; mock-only conveniences stay guarded by `!isLive`.
+    nonisolated let isLive: Bool
     private let latency: Duration
+    private let hasSession: Bool
+    private var snapshot: BackendSnapshot
+    private var refreshFails = false
+    private var savesFail = false
+    private(set) var registeredDevices: [DeviceRegistration] = []
+    private(set) var unregisteredDeviceTokens: [String] = []
+    /// Ordered record of the calls tests assert on: `register:<token>`, `unregister:<token>`,
+    /// `signOut`, and every save by its method name (`saveAvailability`, `blockMember`, ...).
+    private(set) var events: [String] = []
 
-    init(latency: Duration = .milliseconds(280)) {
+    init(
+        latency: Duration = .milliseconds(280),
+        isLive: Bool = false,
+        hasSession: Bool = false,
+        introductionAvailable: Bool = true
+    ) {
         self.latency = latency
+        self.isLive = isLive
+        self.hasSession = hasSession
+        self.snapshot = MockData.snapshot(introduction: introductionAvailable ? MockData.introduction : nil)
     }
 
-    func hasValidSession() async -> Bool { false }
+    /// The snapshot every later refresh serves; tests shape it to drive the phase.
+    func setSnapshot(_ snapshot: BackendSnapshot) { self.snapshot = snapshot }
+
+    /// Every refresh fails while set.
+    func setRefreshFails(_ value: Bool) { refreshFails = value }
+
+    /// Every save fails while set, so each rollback and retry path is exercised on purpose.
+    func setSavesFail(_ value: Bool) { savesFail = value }
+
+    func hasValidSession() async -> Bool { hasSession }
 
     func bootstrap() async throws -> BackendSnapshot {
         try await pause()
-        return MockData.bootstrap
+        if refreshFails { throw MockServiceError.requestFailed }
+        return snapshot
     }
 
     func validateCompany(email: String) async throws -> CompanyDomainDecision {
@@ -63,7 +92,11 @@ actor MockBackendService: BackendService {
             "1password.com": "1Password",
             "clio.com": "Clio",
             "cohere.com": "Cohere",
-            "thomsonreuters.com": "Thomson Reuters"
+            "thomsonreuters.com": "Thomson Reuters",
+            "servicenow.com": "ServiceNow",
+            "databricks.com": "Databricks",
+            "tenstorrent.com": "Tenstorrent",
+            "celestica.com": "Celestica"
         ]
 
         if let company = knownCompanies[domain] {
@@ -94,11 +127,73 @@ actor MockBackendService: BackendService {
 
     func acceptMagicLinkCallback(_ url: URL) async throws {}
 
-    func signOut() async throws {}
+    func signOut() async throws {
+        events.append("signOut")
+    }
+
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws {
+        try await pause()
+        if token.hasPrefix("dead") { throw MockServiceError.requestFailed }
+        if let registration = DeviceRegistration(token: token, environment: environment) {
+            registeredDevices.append(registration)
+        }
+        events.append("register:\(token)")
+    }
+
+    func unregisterDeviceToken(_ token: String) async throws {
+        try await pause()
+        unregisteredDeviceTokens.append(token)
+        events.append("unregister:\(token)")
+    }
 
     func deliverMessage(_ body: String, conversationID: UUID?, idempotencyKey: UUID) async throws {
         try await pause()
         if body.lowercased().contains("fail") { throw MockServiceError.requestFailed }
+    }
+
+    func saveProfile(_ profile: ProfessionalProfile, onboardingComplete: Bool) async throws {
+        try await save("saveProfile")
+    }
+
+    func saveNetworkingPreferences(_ preferences: NetworkingPreferences) async throws {
+        try await save("saveNetworkingPreferences")
+    }
+
+    func saveMeetingPreferences(_ preferences: MeetingPreferences) async throws {
+        try await save("saveMeetingPreferences")
+    }
+
+    func saveAvailability(_ availability: TodayAvailability?) async throws {
+        try await save("saveAvailability")
+    }
+
+    func respondToIntroduction(_ id: UUID, interested: Bool) async throws -> BackendIntroductionResult {
+        try await save("respondToIntroduction")
+        return interested ? .waiting : .notMutual
+    }
+
+    func createMeetup(conversationID: UUID, detail: String) async throws {
+        try await save("createMeetup")
+    }
+
+    func recordMeetupFeedback(conversationID: UUID, outcome: MeetupOutcome, stayConnected: Bool) async throws {
+        try await save("recordMeetupFeedback")
+    }
+
+    func endConversation(_ id: UUID) async throws {
+        try await save("endConversation")
+    }
+
+    func blockMember(_ id: UUID) async throws {
+        try await save("blockMember")
+    }
+
+    func unblockMember(named name: String) async throws {
+        try await save("unblockMember")
+    }
+
+    func removeConnection(_ id: UUID) async throws {
+        try await save("removeConnection")
     }
 
     func processResume(
@@ -119,12 +214,28 @@ actor MockBackendService: BackendService {
         try await pause()
     }
 
+    func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data? {
+        try await pause()
+        guard reference.key == "northstar-ai" else { return nil }
+        return MockData.sampleMarkPNG
+    }
+
     private func pause() async throws {
         try await Task.sleep(for: latency)
+    }
+
+    /// Every save shares one latency and one failure switch; a refused save records nothing.
+    private func save(_ name: String) async throws {
+        try await pause()
+        if savesFail { throw MockServiceError.requestFailed }
+        events.append(name)
     }
 }
 
 enum MockData {
+    /// A fixed 128 x 128 solid PNG standing in for Northstar AI's published icon in previews.
+    static let sampleMarkPNG = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAAAyUlEQVR42u3RMQ0AAAgEsdfIggj878iAockpuKamdVgsAABAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAFwAAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAHxoAbn8BAyRRrRLAAAAAElFTkSuQmCC") ?? Data()
+
     static let resumeDraft = ProfileImportSuggestions(
         name: "Alex Morgan",
         role: "Engineering Director",
@@ -165,18 +276,40 @@ enum MockData {
         ]
     )
 
-    static let bootstrap = BackendSnapshot(
-        verifiedWorkEmail: "alex@orbitsystems.com",
-        member: .currentMember,
-        introduction: introduction,
-        conversation: nil,
-        connections: [priorConnection],
-        networkingPreferences: NetworkingPreferences(),
-        meetingPreferences: MeetingPreferences(),
-        safetyPreferences: SafetyPreferences(),
-        availability: nil,
-        onboardingComplete: true,
-        waitingForReciprocalInterest: false,
-        membership: .trial()
-    )
+    static let bootstrap = snapshot()
+
+    /// The demonstration snapshot with the parts tests vary: which introduction is served,
+    /// whether the member is already waiting on it, and whether a conversation is open.
+    static func snapshot(
+        introduction: Introduction? = MockData.introduction,
+        waiting: Bool = false,
+        conversation: Conversation? = nil
+    ) -> BackendSnapshot {
+        BackendSnapshot(
+            verifiedWorkEmail: "alex@orbitsystems.com",
+            member: .currentMember,
+            introduction: introduction,
+            conversation: conversation,
+            connections: [priorConnection],
+            networkingPreferences: NetworkingPreferences(),
+            meetingPreferences: MeetingPreferences(),
+            safetyPreferences: SafetyPreferences(),
+            availability: nil,
+            onboardingComplete: true,
+            waitingForReciprocalInterest: introduction != nil && waiting,
+            membership: .trial()
+        )
+    }
+
+    /// The demonstration introduction under another identifier, for tests that need a second one.
+    static func introductionVariant(id: UUID) -> Introduction {
+        Introduction(
+            id: id,
+            person: introduction.person,
+            reasonForYou: introduction.reasonForYou,
+            reasonForThem: introduction.reasonForThem,
+            meetingContext: introduction.meetingContext,
+            createdAt: introduction.createdAt
+        )
+    }
 }

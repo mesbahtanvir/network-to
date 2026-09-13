@@ -68,6 +68,10 @@ actor SupabaseBackendService: BackendService {
             .rpc("get_membership_status")
             .execute()
             .value
+        async let ownMarkRequest: OwnCompanyMarkRow = client
+            .rpc("get_own_company_mark")
+            .execute()
+            .value
 
         let profileRow = try await profileRequest
         let experiences = try await experiencesRequest
@@ -76,12 +80,14 @@ actor SupabaseBackendService: BackendService {
         let availabilityRows = try await availabilityRequest
         let safety = try await safetyRequest
         let membership = try await membershipRequest
+        let ownMark = try? await ownMarkRequest
         let introductionState = try await currentIntroduction()
         let conversation = try await activeConversation(currentUserID: user.id)
         let connections = try await currentConnections()
 
         var profile = profileRow.profile
         profile.professionalHistory = experiences.map(\.experience)
+        profile.companyMark = ownMark?.companyMark
 
         return BackendSnapshot(
             verifiedWorkEmail: profileRow.email ?? user.email ?? "",
@@ -97,6 +103,25 @@ actor SupabaseBackendService: BackendService {
             waitingForReciprocalInterest: introductionState?.isWaiting ?? false,
             membership: membership.membership
         )
+    }
+
+    /// Marks are public company icons served from the project host; the request carries no
+    /// session, so nothing ties a member to the companies they view.
+    func loadCompanyMark(_ reference: CompanyMarkReference) async throws -> Data? {
+        guard reference.path.range(of: "^[a-z0-9][a-z0-9-]{0,62}/[0-9]+\\.(png|jpg)$", options: .regularExpression) != nil else {
+            return nil
+        }
+        let url = configuration.url.appending(path: "storage/v1/object/public/company-marks/\(reference.path)")
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseBackendError.requestFailed }
+        if http.statusCode == 404 { return nil }
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
+        guard http.statusCode == 200, contentType.hasPrefix("image/"), !data.isEmpty else {
+            throw SupabaseBackendError.requestFailed
+        }
+        return data
     }
 
     func validateCompany(email: String) async throws -> CompanyDomainDecision {
@@ -191,6 +216,18 @@ actor SupabaseBackendService: BackendService {
 
     func signOut() async throws {
         try await client.auth.signOut()
+    }
+
+    func registerDeviceToken(_ token: String, environment: PushEnvironment) async throws {
+        try await client
+            .rpc("register_device_token", params: DeviceTokenParameters(token: token, environment: environment.rawValue))
+            .execute()
+    }
+
+    func unregisterDeviceToken(_ token: String) async throws {
+        try await client
+            .rpc("unregister_device_token", params: DeviceTokenRemovalParameters(token: token))
+            .execute()
     }
 
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async throws {
@@ -692,10 +729,16 @@ private struct CompanyDomainResponse: Decodable {
     enum CodingKeys: String, CodingKey { case decision, domain; case companyName = "company_name" }
 }
 
+private struct OwnCompanyMarkRow: Decodable {
+    let companyMark: CompanyMarkReference?
+    enum CodingKeys: String, CodingKey { case companyMark = "company_mark" }
+}
+
 private struct ProfileRow: Decodable {
     let id: UUID
     let email: String?
     let companyName: String
+    let companyMark: CompanyMarkReference?
     let name: String
     let role: String
     let city: String
@@ -717,6 +760,7 @@ private struct ProfileRow: Decodable {
     enum CodingKeys: String, CodingKey {
         case id, email, name, role, city, topics, bio, contribution, education
         case companyName = "company_name"
+        case companyMark = "company_mark"
         case roleScope = "role_scope"
         case currentFocus = "current_focus"
         case yearsExperience = "years_experience"
@@ -749,7 +793,8 @@ private struct ProfileRow: Decodable {
             contribution: contribution,
             contributionBoundaries: contributionBoundaries,
             isWorkEmailVerified: true,
-            education: education ?? ""
+            education: education ?? "",
+            companyMark: companyMark
         )
     }
 }
@@ -1094,6 +1139,15 @@ private struct MeetupFeedbackParameters: Encodable {
 private struct ConversationParameters: Encodable {
     let conversationID: UUID
     enum CodingKeys: String, CodingKey { case conversationID = "p_conversation_id" }
+}
+private struct DeviceTokenParameters: Encodable {
+    let token: String
+    let environment: String
+    enum CodingKeys: String, CodingKey { case token = "p_token"; case environment = "p_environment" }
+}
+private struct DeviceTokenRemovalParameters: Encodable {
+    let token: String
+    enum CodingKeys: String, CodingKey { case token = "p_token" }
 }
 private struct MemberParameters: Encodable {
     let memberID: UUID

@@ -25,3 +25,17 @@ export async function authenticatedUser(request: Request): Promise<{ id: string;
   return { id: user.id, token };
 }
 
+/** Compares a presented secret with the expected one without leaking where they differ. */
+export async function secretsMatch(presented: string, expected: string): Promise<boolean> {
+  if (!presented || !expected) return false;
+  const encoder = new TextEncoder();
+  const [presentedDigest, expectedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(presented)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+  ]);
+  const left = new Uint8Array(presentedDigest);
+  const right = new Uint8Array(expectedDigest);
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
+  return difference === 0;
+}
