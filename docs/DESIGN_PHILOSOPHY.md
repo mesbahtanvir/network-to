@@ -19,8 +19,8 @@ as soon as it can.
 
 - Today shows one introduction or one next action. There is nothing else to look at.
 - An introduction is a full screen with a clear decision, readable in under a minute. Pass
-  and Interested are both explicit text buttons. Pass confirms privately once and may invite
-  optional private feedback afterwards; a reason is never required.
+  and Interested are both explicit text buttons. Pass confirms privately once and asks
+  nothing further; no reason is collected.
 - The app has no reason to be opened when nothing has changed. There are no streaks, no daily
   check-ins, and no content to consume.
 - Onboarding asks for what the product needs and nothing more, and the résumé fast path fills
@@ -40,6 +40,9 @@ them.
   failures must offer retry. Every notice carries a kind that its symbol, tint, and text agree
   on; an error names the action that did not happen and stays, with Retry, until the member
   acts on it (`NTInlineNotice` and `NTOfflineState` in `docs/COMPONENT_STATE_SHEET.md`).
+- A control does what its label says. A button for a flow that does not exist yet is
+  removed, not shipped behind a placeholder message, and nothing thanks a member for a record
+  the product did not keep.
 
 ## 3. Make use of the periphery
 

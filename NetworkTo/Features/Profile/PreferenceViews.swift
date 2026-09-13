@@ -185,9 +185,6 @@ struct WorkVerificationView: View {
             Section("Changing companies") {
                 Text("Your account, conversations, and connections remain yours. A new company must be verified before its badge appears.")
                     .foregroundStyle(NTColor.textSecondary)
-                Button("Verify a new work email") {
-                    store.presentInformation("Company reverification flow is ready for backend connection")
-                }
             }
         }
         .ntScreenBackground()

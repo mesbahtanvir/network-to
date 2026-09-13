@@ -131,7 +131,7 @@ Account context is progressive. O-02 through O-06 use short, focused steps and r
 | T-01 | Today — searching | Communicate that quality takes time | Active search, profile needs work, paused, notification invitation |
 | T-02 | Today — introduction ready | Announce one new introduction without showing a feed | New, seen |
 | T-03 | Introduction | Explain identity, reciprocal value, trust, and practical meeting context | Default, Available Today context |
-| T-04 | Pass confirmation | Make passing clear but inexpensive | Default, optional private feedback later |
+| T-04 | Pass confirmation | Make passing clear but inexpensive | Default: the private-Pass sentence and one action, Return to Today; nothing further is asked |
 | T-05 | Interested — waiting | Confirm the private response without implying rejection | Waiting, ended at its expiry (one state, shown once, whatever ended it), notification invitation |
 | T-06 | Mutual interest | Celebrate lightly and open the conversation | Default |
 | T-07 | Available Today | Set temporary area and broad time window | Off, configuring, active, expiring, expired |
@@ -166,7 +166,7 @@ A person should become a **Connection** only after the relationship progressed b
 | P-02 | Edit profile | Maintain role, bio, history, professional ambition, growth, and contribution | Editing, saved, validation |
 | P-03 | Introduction preferences | Maintain frequency, goals, and professional preferences | Weekly default, alternatives, paused |
 | P-04 | Meeting preferences | Maintain work areas, formats, and usual availability | Default, customized |
-| P-05 | Work verification | Show verified company and reverification flow | Verified, expiring, changed company, pending |
+| P-05 | Work verification | Show the verified company and explain changing companies | Verified; the reverification flow is not built and no control claims it |
 | P-06 | Privacy and safety | Explain inclusive introduction design and maintain blocked members and community standards | Default, blocked member present |
 | P-07 | Notification settings handoff | Reflect the phone's permission status; present the phone's dialog while it has never been asked, otherwise open the app-specific notification page in iPhone Settings; do not recreate delivery controls in-app | Never asked, on, off, native Settings available, unavailable fallback |
 | P-08 | Account | Support sign-out and account deletion | Default, destructive confirmation |
@@ -194,7 +194,7 @@ If **Pass**:
 
 `Pass → Neutral confirmation → Today searching`
 
-- A Pass is private. The introduction stays open for the other member with its original expiry, the member who passed never sees it again, and they may receive a new introduction at their normal cadence.
+- A Pass is private. The introduction stays open for the other member with its original expiry, the member who passed never sees it again, and they may receive a new introduction at their normal cadence. The confirmation asks nothing further: no reason, no feedback step.
 
 If **Interested**:
 
