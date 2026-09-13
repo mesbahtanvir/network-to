@@ -276,6 +276,9 @@ design philosophy in `docs/DESIGN_PHILOSOPHY.md` is binding.
   verification wording, reachable but unobtrusive safety actions.
 - Every spec and plan MUST include a Calm Technology check answering the questions at the end
   of `docs/DESIGN_PHILOSOPHY.md`; a proposal that fails one MUST be redesigned or dropped.
+- Every control MUST do what its label says. A control for a flow that does not exist yet
+  MUST be removed rather than shipped behind a placeholder message, and the app MUST NOT thank
+  a member for a record it did not keep.
 
 Rationale: the product's purpose is to get two people to meet in person. Anything that holds
 attention inside the app, alarms, or performs is working against that purpose.
@@ -410,6 +413,15 @@ expiry. The three follow-ups above are closed; `docs/UI_DESIGN_SPEC.md`,
 `docs/COMPONENT_STATE_SHEET.md`, `docs/DESIGN_PHILOSOPHY.md`, and `docs/SUPABASE_BACKEND.md`
 describe the shipped behaviour.
 
+1.5.0 (MINOR): Principle VIII gains the rule that a control does what its label says and that
+a placeholder for a flow that does not exist is removed rather than shipped;
+`docs/DESIGN_PHILOSOPHY.md` now states that a Pass confirms once and asks nothing further.
+The Pass confirmation's "Share private feedback" sheet (which said "Feedback saved privately"
+while recording nothing) and the Work verification screen's "Verify a new work email" button
+(which showed a developer placeholder) are removed. Recording pass reasons and reverifying a
+changed company are each their own future feature with their own retention rule. No backend
+change.
+
 Versioning follows MAJOR.MINOR.PATCH:
 - MAJOR: a principle is removed or redefined, a refused surface is admitted, a privacy or
   trust boundary in Principles II, IV, or VI is loosened, or a gate becomes optional.
@@ -426,4 +438,4 @@ Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
 `docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
 same PR as any change that alters what they describe.
 
-**Version**: 1.4.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12
+**Version**: 1.5.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-13

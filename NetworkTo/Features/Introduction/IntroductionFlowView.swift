@@ -5,7 +5,6 @@ struct IntroductionFlowView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var showPassConfirmation = false
-    @State private var showPassFeedback = false
 
     var body: some View {
         ScrollView {
@@ -252,11 +251,8 @@ struct IntroductionFlowView: View {
             )
             Button("Return to Today") { dismiss() }
                 .buttonStyle(NTPrimaryButtonStyle())
-            Button("Share private feedback") { showPassFeedback = true }
-                .font(.subheadline.weight(.semibold))
         }
         .padding(.top, NTSpacing.xl)
-        .sheet(isPresented: $showPassFeedback) { PassFeedbackView() }
     }
 
     private var nonMutual: some View {
@@ -270,49 +266,5 @@ struct IntroductionFlowView: View {
                 .buttonStyle(NTPrimaryButtonStyle())
         }
         .padding(.top, NTSpacing.xl)
-    }
-}
-
-private struct PassFeedbackView: View {
-    @EnvironmentObject private var store: AppStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var reason: String?
-    private let reasons = ["Professional relevance", "Timing", "Location", "I already know them", "Topic mismatch"]
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text("Optional feedback is private and only improves future introductions.")
-                        .foregroundStyle(NTColor.textSecondary)
-                }
-                Section("What influenced your decision?") {
-                    ForEach(reasons, id: \.self) { item in
-                        Button {
-                            reason = item
-                        } label: {
-                            HStack {
-                                Text(item).foregroundStyle(NTColor.textPrimary)
-                                Spacer()
-                                if reason == item { Image(systemName: "checkmark").foregroundStyle(NTColor.accent) }
-                            }
-                        }
-                    }
-                }
-            }
-            .ntScreenBackground()
-            .navigationTitle("Private feedback")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Skip") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Submit") {
-                        store.presentSuccess("Feedback saved privately")
-                        dismiss()
-                    }
-                    .disabled(reason == nil)
-                }
-            }
-        }
     }
 }
