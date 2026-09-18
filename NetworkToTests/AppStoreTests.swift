@@ -288,6 +288,78 @@ final class AppStoreTests: XCTestCase {
         XCTAssertEqual(store.phase, .searching)
     }
 
+    func testLiveColdLaunchWaitsForSessionDecisionInsteadOfShowingSignIn() {
+        let store = AppStore(
+            defaults: UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!,
+            seedMockData: false,
+            backend: MockBackendService(latency: .zero, isLive: true, hasSession: false)
+        )
+
+        XCTAssertEqual(store.sessionGateState, .restoring)
+        XCTAssertFalse(store.hasAuthenticated)
+    }
+
+    func testMissingStoredSessionResolvesToSignedOut() async {
+        let store = AppStore(
+            defaults: UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!,
+            seedMockData: false,
+            backend: MockBackendService(latency: .zero, isLive: true, hasSession: false)
+        )
+
+        await store.restoreBackendSession()
+
+        XCTAssertEqual(store.sessionGateState, .signedOut)
+        XCTAssertFalse(store.hasAuthenticated)
+    }
+
+    func testSessionCheckNetworkFailureIsRecoverableAndDoesNotLookSignedOut() async {
+        let backend = MockBackendService(latency: .zero, isLive: true, hasSession: true)
+        await backend.setSessionCheckFails(true)
+        let store = AppStore(
+            defaults: UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!,
+            seedMockData: false,
+            backend: backend
+        )
+
+        await store.restoreBackendSession()
+
+        XCTAssertEqual(store.sessionGateState, .unavailable)
+        XCTAssertFalse(store.hasAuthenticated)
+    }
+
+    func testBootstrapFailureAfterSessionRestoreIsRecoverable() async {
+        let backend = MockBackendService(latency: .zero, isLive: true, hasSession: true)
+        await backend.setRefreshFails(true)
+        let store = AppStore(
+            defaults: UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!,
+            seedMockData: false,
+            backend: backend
+        )
+
+        await store.restoreBackendSession()
+
+        XCTAssertEqual(store.sessionGateState, .unavailable)
+        XCTAssertFalse(store.hasAuthenticated)
+    }
+
+    func testForegroundRefreshFailureKeepsAnAuthenticatedMemberInTheApp() async {
+        let backend = MockBackendService(latency: .zero, isLive: true, hasSession: true)
+        await backend.setRefreshFails(true)
+        let store = AppStore(
+            defaults: UserDefaults(suiteName: "AppStoreTests.\(UUID().uuidString)")!,
+            hasAuthenticated: true,
+            hasCompletedOnboarding: true,
+            seedMockData: false,
+            backend: backend
+        )
+
+        await store.restoreBackendSession()
+
+        XCTAssertEqual(store.sessionGateState, .authenticated)
+        XCTAssertTrue(store.hasAuthenticated)
+        XCTAssertEqual(store.notice?.kind, .information)
+    }
+
     func testSupabaseConfigurationRejectsRemotePlaintextAndBuildPlaceholders() {
         XCTAssertNil(SupabaseConfiguration.load(environment: [
             "SUPABASE_URL": "http://example.supabase.co",

@@ -9,7 +9,12 @@ struct AuthenticationView: View {
     @State private var magicLinkRequest: MagicLinkRequest?
     @State private var emailError: String?
     @State private var serviceError: String?
-    @State private var isSubmitting = false
+    @State private var submissionOperation: SubmissionOperation?
+    @State private var submissionID: UUID?
+    @State private var submissionTask: Task<Void, Never>?
+    @State private var isSubmissionTakingLonger = false
+    @State private var verificationConnectionInterrupted = false
+    @State private var verificationExpired = false
     @State private var resendSecondsRemaining = 60
     @FocusState private var focusedField: Field?
 
@@ -19,24 +24,46 @@ struct AuthenticationView: View {
         case magicLinkSent(AuthenticationIntent)
         case companyReview(String)
         case recovery
-        case recoverySent
     }
 
     private enum Field { case email }
 
+    private enum SubmissionOperation: Equatable {
+        case checkingCompany
+        case sendingLink
+        case resendingLink
+
+        var title: String {
+            switch self {
+            case .checkingCompany: "Checking your company…"
+            case .sendingLink, .resendingLink: "Sending secure link…"
+            }
+        }
+    }
+
+    private var isSubmitting: Bool { submissionOperation != nil }
+
     init() {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("--auth-signup-email") {
+        if arguments.contains("--auth-signin-loading") {
+            _stage = State(initialValue: .email(.signIn))
+            _email = State(initialValue: "you@company.com")
+            _submissionOperation = State(initialValue: .checkingCompany)
+            _isSubmissionTakingLonger = State(initialValue: true)
+        } else if arguments.contains("--auth-signup-email") {
             _stage = State(initialValue: .email(.signUp))
         } else if arguments.contains("--auth-signin-email") {
             _stage = State(initialValue: .email(.signIn))
-        } else if arguments.contains("--auth-signup-verification") {
+        } else if arguments.contains("--auth-signup-verification") || arguments.contains("--auth-signup-verification-offline") {
             _stage = State(initialValue: .magicLinkSent(.signUp))
             _email = State(initialValue: "alex@orbitsystems.com")
             _magicLinkRequest = State(initialValue: MagicLinkRequest(
                 id: UUID(), claimSecret: "preview-magic-link-request", email: "alex@orbitsystems.com"
             ))
+            if arguments.contains("--auth-signup-verification-offline") {
+                _verificationConnectionInterrupted = State(initialValue: true)
+            }
         } else {
             _stage = State(initialValue: .welcome)
         }
@@ -60,8 +87,6 @@ struct AuthenticationView: View {
                     companyReview(domain)
                 case .recovery:
                     accountRecovery
-                case .recoverySent:
-                    recoveryConfirmation
                 }
             }
             .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -69,6 +94,19 @@ struct AuthenticationView: View {
         .foregroundStyle(NTColor.textPrimary)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: stage)
         .task { await restorePendingMagicLinkIfNeeded() }
+        .onDisappear { cancelSubmission() }
+        .overlay(alignment: .top) {
+            if let notice = store.authenticationNotice {
+                NTInlineNotice(
+                    notice: notice,
+                    dismiss: { store.dismissAuthenticationNotice(id: notice.id) }
+                )
+                .padding(.horizontal, NTSpacing.md)
+                .padding(.top, NTSpacing.sm)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: store.authenticationNotice)
     }
 
     private var welcome: some View {
@@ -140,7 +178,10 @@ struct AuthenticationView: View {
 
     private func emailEntry(_ intent: AuthenticationIntent) -> some View {
         VStack(spacing: 0) {
-            authenticationHeader { stage = .welcome }
+            authenticationHeader {
+                cancelSubmission()
+                stage = .welcome
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: NTSpacing.xl) {
                     authenticationTitle(
@@ -191,15 +232,19 @@ struct AuthenticationView: View {
                             .font(.footnote)
                             .foregroundStyle(NTColor.destructive)
                     }
+                    if isSubmissionTakingLonger {
+                        connectionDelayNote
+                    }
                 }
                 .padding(.horizontal, NTSpacing.lg)
                 .padding(.top, NTSpacing.xl)
             }
 
-            Button("Continue") { continueFromEmail(intent) }
+            Button { continueFromEmail(intent) } label: {
+                submissionButtonLabel(defaultTitle: "Continue")
+            }
                 .buttonStyle(NTPrimaryButtonStyle())
-                .disabled(isSubmitting)
-                .overlay { if isSubmitting { ProgressView().tint(NTColor.background) } }
+                .disabled(isSubmitting || email.isEmpty)
                 .padding(.horizontal, NTSpacing.lg)
                 .padding(.vertical, NTSpacing.md)
                 .background(.ultraThinMaterial)
@@ -231,24 +276,43 @@ struct AuthenticationView: View {
                     .ntSurface()
 
                     HStack(spacing: NTSpacing.sm) {
-                        ProgressView().tint(NTColor.accent)
+                        Group {
+                            if verificationExpired {
+                                Image(systemName: "clock.badge.exclamationmark")
+                                    .foregroundStyle(NTColor.warning)
+                            } else if verificationConnectionInterrupted {
+                                Image(systemName: "wifi.exclamationmark")
+                                    .foregroundStyle(NTColor.warning)
+                            } else {
+                                ProgressView().tint(NTColor.accent)
+                            }
+                        }
+                        .frame(width: 22)
                         VStack(alignment: .leading, spacing: NTSpacing.xxs) {
-                            Text("Waiting for verification")
+                            Text(verificationExpired ? "This link expired" : (verificationConnectionInterrupted ? "Connection interrupted" : "Waiting for verification"))
                                 .font(.subheadline.weight(.semibold))
-                            Text("This request expires shortly and works only with this iPhone.")
+                            Text(verificationExpired
+                                 ? "Send a new secure link to continue."
+                                 : (verificationConnectionInterrupted
+                                    ? "We’ll keep checking automatically when the connection returns."
+                                    : "This request expires shortly and works only with this iPhone."))
                                 .font(.footnote)
                                 .foregroundStyle(NTColor.textSecondary)
                         }
                     }
                     .padding(NTSpacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(NTColor.accent.opacity(0.07))
+                    .background((verificationExpired || verificationConnectionInterrupted ? NTColor.warning : NTColor.accent).opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: NTRadius.field, style: .continuous))
+                    .accessibilityElement(children: .combine)
 
                     if let serviceError {
                         Label(serviceError, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(NTColor.destructive)
+                    }
+                    if isSubmissionTakingLonger {
+                        connectionDelayNote
                     }
                 }
                 .padding(.horizontal, NTSpacing.lg)
@@ -256,8 +320,12 @@ struct AuthenticationView: View {
             }
 
             VStack(spacing: NTSpacing.xs) {
-                Button(resendSecondsRemaining > 0 ? "Send a new link in \(resendSecondsRemaining)s" : "Send a new link") {
-                    resendMagicLink(intent)
+                Button { resendMagicLink(intent) } label: {
+                    if submissionOperation == .resendingLink {
+                        submissionButtonLabel(defaultTitle: "Send a new link")
+                    } else {
+                        Text(resendSecondsRemaining > 0 ? "Send a new link in \(resendSecondsRemaining)s" : "Send a new link")
+                    }
                 }
                 .buttonStyle(NTSecondaryButtonStyle())
                 .disabled(isSubmitting || resendSecondsRemaining > 0)
@@ -355,7 +423,10 @@ struct AuthenticationView: View {
 
     private var accountRecovery: some View {
         VStack(spacing: 0) {
-            authenticationHeader { stage = .email(.signIn) }
+            authenticationHeader {
+                cancelSubmission()
+                stage = .email(.signIn)
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: NTSpacing.xl) {
                     authenticationTitle("Recover your account", "Enter your verified work email and we’ll send a secure recovery link.")
@@ -372,30 +443,25 @@ struct AuthenticationView: View {
                             .clipShape(RoundedRectangle(cornerRadius: NTRadius.field, style: .continuous))
                     }
                     NTPrivacyNote(text: "Recovery links expire and can only be used once.")
+                    if let serviceError {
+                        Label(serviceError, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(NTColor.destructive)
+                    }
+                    if isSubmissionTakingLonger {
+                        connectionDelayNote
+                    }
                 }
                 .padding(NTSpacing.lg)
             }
-            Button("Send secure sign-in link") { continueFromEmail(.signIn) }
+            Button { continueFromEmail(.signIn) } label: {
+                submissionButtonLabel(defaultTitle: "Send secure sign-in link")
+            }
                 .buttonStyle(NTPrimaryButtonStyle())
                 .disabled(!email.contains("@") || isSubmitting)
-                .overlay { if isSubmitting { ProgressView().tint(NTColor.background) } }
                 .padding(NTSpacing.lg)
         }
         .onAppear { focusedField = .email }
-    }
-
-    private var recoveryConfirmation: some View {
-        VStack(alignment: .leading, spacing: NTSpacing.xl) {
-            Spacer()
-            Image(systemName: "envelope.badge.fill")
-                .font(.system(size: 46))
-                .foregroundStyle(NTColor.accent)
-            authenticationTitle("Check your inbox", "If an account exists for \(email), a secure recovery link is on its way.")
-            Button("Back to sign in") { stage = .email(.signIn) }
-                .buttonStyle(NTPrimaryButtonStyle())
-            Spacer()
-        }
-        .padding(NTSpacing.lg)
     }
 
     private func authenticationTitle(_ title: String, _ detail: String) -> some View {
@@ -406,6 +472,73 @@ struct AuthenticationView: View {
                 .foregroundStyle(NTColor.textSecondary)
                 .lineSpacing(2)
         }
+    }
+
+    private var connectionDelayNote: some View {
+        Label("This is taking longer than usual. Keep network.to open; it’s safe to try again if the request doesn’t finish.", systemImage: "hourglass")
+            .font(.footnote)
+            .foregroundStyle(NTColor.textSecondary)
+            .padding(NTSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(NTColor.surfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: NTRadius.context, style: .continuous))
+            .accessibilityLabel("This is taking longer than usual. Keep network.to open. It is safe to try again if the request does not finish.")
+    }
+
+    private func submissionButtonLabel(defaultTitle: String) -> some View {
+        HStack(spacing: NTSpacing.xs) {
+            if submissionOperation != nil {
+                ProgressView()
+                    .tint(NTColor.textSecondary)
+                    .controlSize(.small)
+            }
+            Text(submissionOperation?.title ?? defaultTitle)
+        }
+    }
+
+    private func beginSubmission(_ operation: SubmissionOperation) -> UUID {
+        cancelSubmission()
+        store.clearAuthenticationNotice()
+        let id = UUID()
+        submissionID = id
+        submissionOperation = operation
+        scheduleLongRequestMessage(for: id, operation: operation)
+        return id
+    }
+
+    private func updateSubmission(_ id: UUID, to operation: SubmissionOperation) {
+        guard submissionID == id else { return }
+        submissionOperation = operation
+        isSubmissionTakingLonger = false
+        scheduleLongRequestMessage(for: id, operation: operation)
+    }
+
+    private func finishSubmission(_ id: UUID) {
+        guard submissionID == id else { return }
+        submissionTask = nil
+        submissionID = nil
+        submissionOperation = nil
+        isSubmissionTakingLonger = false
+    }
+
+    private func cancelSubmission() {
+        submissionTask?.cancel()
+        submissionTask = nil
+        submissionID = nil
+        submissionOperation = nil
+        isSubmissionTakingLonger = false
+    }
+
+    private func scheduleLongRequestMessage(for id: UUID, operation: SubmissionOperation) {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled, submissionID == id, submissionOperation == operation else { return }
+            isSubmissionTakingLonger = true
+        }
+    }
+
+    private func requestFailureMessage(action: String) -> String {
+        "We couldn’t \(action). Check your connection and try again."
     }
 
     private func continueFromEmail(_ intent: AuthenticationIntent) {
@@ -426,14 +559,21 @@ struct AuthenticationView: View {
         emailError = nil
         serviceError = nil
         focusedField = nil
-        isSubmitting = true
-        Task {
-            defer { isSubmitting = false }
+        guard !isSubmitting else { return }
+        let id = beginSubmission(.checkingCompany)
+        submissionTask = Task {
+            defer { finishSubmission(id) }
             do {
                 let decision = try await store.validateCompany(for: normalized)
+                guard !Task.isCancelled, submissionID == id else { return }
                 switch decision {
                 case .eligible:
-                    magicLinkRequest = try await store.requestMagicLink(for: normalized, intent: intent)
+                    updateSubmission(id, to: .sendingLink)
+                    let request = try await store.requestMagicLink(for: normalized, intent: intent)
+                    guard !Task.isCancelled, submissionID == id else { return }
+                    magicLinkRequest = request
+                    verificationConnectionInterrupted = false
+                    verificationExpired = false
                     stage = .magicLinkSent(intent)
                 case .reviewRequired(let domain):
                     if intent == .signUp {
@@ -445,39 +585,56 @@ struct AuthenticationView: View {
                     serviceError = reason
                 }
             } catch {
-                serviceError = error.localizedDescription
+                guard !Task.isCancelled, submissionID == id else { return }
+                serviceError = requestFailureMessage(action: "continue")
             }
         }
     }
 
     private func resendMagicLink(_ intent: AuthenticationIntent) {
-        magicLinkRequest = nil
-        resendSecondsRemaining = 60
+        guard !isSubmitting, resendSecondsRemaining == 0 else { return }
         serviceError = nil
-        isSubmitting = true
-        Task {
-            defer { isSubmitting = false }
+        let id = beginSubmission(.resendingLink)
+        submissionTask = Task {
+            defer { finishSubmission(id) }
             do {
-                magicLinkRequest = try await store.requestMagicLink(for: email, intent: intent)
+                let request = try await store.requestMagicLink(for: email, intent: intent)
+                guard !Task.isCancelled, submissionID == id else { return }
+                magicLinkRequest = request
+                verificationConnectionInterrupted = false
+                verificationExpired = false
+                resendSecondsRemaining = 60
             } catch {
-                serviceError = error.localizedDescription
+                guard !Task.isCancelled, submissionID == id else { return }
+                serviceError = requestFailureMessage(action: "send a new link")
             }
         }
     }
 
     private func waitForMagicLink(_ request: MagicLinkRequest) async {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--auth-signup-verification-offline") { return }
+        #endif
         while !Task.isCancelled {
             guard request.createdAt.addingTimeInterval(10 * 60) > Date() else {
-                serviceError = "This sign-in link expired. Send a new link to continue."
+                verificationExpired = true
+                verificationConnectionInterrupted = false
                 await store.clearPendingMagicLinkRequest()
                 return
             }
             do {
                 if try await store.claimMagicLink(request) { return }
+                verificationConnectionInterrupted = false
             } catch {
                 guard !Task.isCancelled else { return }
-                serviceError = error.localizedDescription
-                return
+                verificationConnectionInterrupted = true
+                serviceError = nil
+                do {
+                    try await Task.sleep(for: .seconds(4))
+                } catch {
+                    return
+                }
+                continue
             }
 
             do {
@@ -496,7 +653,10 @@ struct AuthenticationView: View {
     }
 
     private func abandonMagicLink(andReturnTo intent: AuthenticationIntent) {
+        cancelSubmission()
         magicLinkRequest = nil
+        verificationConnectionInterrupted = false
+        verificationExpired = false
         Task { await store.clearPendingMagicLinkRequest() }
         stage = .email(intent)
     }

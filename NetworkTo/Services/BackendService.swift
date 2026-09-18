@@ -46,7 +46,9 @@ enum BackendIntroductionResult: Sendable {
 protocol BackendService: Sendable {
     var isLive: Bool { get }
 
-    func hasValidSession() async -> Bool
+    /// Returns false only when no stored session exists. Transport and refresh failures throw so
+    /// the app can keep a member out of the signed-out flow while connectivity recovers.
+    func hasValidSession() async throws -> Bool
     func bootstrap() async throws -> BackendSnapshot
     func validateCompany(email: String) async throws -> CompanyDomainDecision
     func sendMagicLink(to email: String, shouldCreateUser: Bool) async throws -> MagicLinkRequest
@@ -145,7 +147,7 @@ struct SupabaseConfiguration: Sendable {
 private actor UnavailableBackendService: BackendService {
     nonisolated let isLive = true
 
-    func hasValidSession() async -> Bool { false }
+    func hasValidSession() async throws -> Bool { throw BackendConfigurationError.invalid }
     func bootstrap() async throws -> BackendSnapshot { throw BackendConfigurationError.invalid }
     func validateCompany(email: String) async throws -> CompanyDomainDecision { throw BackendConfigurationError.invalid }
     func sendMagicLink(to email: String, shouldCreateUser: Bool) async throws -> MagicLinkRequest { throw BackendConfigurationError.invalid }

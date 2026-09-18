@@ -7,6 +7,7 @@ actor MockBackendService: BackendService {
     private let latency: Duration
     private let hasSession: Bool
     private var snapshot: BackendSnapshot
+    private var sessionCheckFails = false
     private var refreshFails = false
     private var savesFail = false
     private(set) var registeredDevices: [DeviceRegistration] = []
@@ -33,10 +34,17 @@ actor MockBackendService: BackendService {
     /// Every refresh fails while set.
     func setRefreshFails(_ value: Bool) { refreshFails = value }
 
+    /// Session storage exists but cannot be refreshed, as when launch happens offline.
+    func setSessionCheckFails(_ value: Bool) { sessionCheckFails = value }
+
     /// Every save fails while set, so each rollback and retry path is exercised on purpose.
     func setSavesFail(_ value: Bool) { savesFail = value }
 
-    func hasValidSession() async -> Bool { hasSession }
+    func hasValidSession() async throws -> Bool {
+        try await pause()
+        if sessionCheckFails { throw MockServiceError.offline }
+        return hasSession
+    }
 
     func bootstrap() async throws -> BackendSnapshot {
         try await pause()

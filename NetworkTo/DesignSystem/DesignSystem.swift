@@ -67,7 +67,7 @@ struct NTPrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.headline)
             .frame(maxWidth: .infinity, minHeight: 52)
-            .foregroundStyle(NTColor.background)
+            .foregroundStyle(isEnabled ? NTColor.background : NTColor.textSecondary)
             .background(isEnabled ? NTColor.accentStrong : NTColor.separator)
             .clipShape(RoundedRectangle(cornerRadius: NTRadius.field, style: .continuous))
             .opacity(configuration.isPressed ? 0.9 : 1)

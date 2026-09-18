@@ -19,8 +19,15 @@ actor SupabaseBackendService: BackendService {
         )
     }
 
-    func hasValidSession() async -> Bool {
-        (try? await client.auth.session) != nil
+    func hasValidSession() async throws -> Bool {
+        do {
+            _ = try await client.auth.session
+            return true
+        } catch let error as AuthError where error == .sessionMissing {
+            return false
+        } catch {
+            throw error
+        }
     }
 
     func bootstrap() async throws -> BackendSnapshot {

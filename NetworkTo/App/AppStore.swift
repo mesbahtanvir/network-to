@@ -1,5 +1,12 @@
 import Foundation
 
+enum SessionGateState: Equatable, Sendable {
+    case restoring
+    case signedOut
+    case authenticated
+    case unavailable
+}
+
 @MainActor
 final class AppStore: ObservableObject {
     @Published private(set) var phase: IntroductionPhase
@@ -8,6 +15,7 @@ final class AppStore: ObservableObject {
     @Published var availability: TodayAvailability?
     @Published var selectedTab: MainTab
     @Published var hasAuthenticated: Bool
+    @Published private(set) var sessionGateState: SessionGateState
     @Published var hasCompletedOnboarding: Bool
     @Published var networkingPreferences: NetworkingPreferences
     @Published var meetingPreferences: MeetingPreferences
@@ -17,6 +25,7 @@ final class AppStore: ObservableObject {
     @Published private(set) var isCompletingOnboarding = false
     /// The single notice channel. Errors stay until dismissed, retried, or replaced.
     @Published private(set) var notice: AppNotice?
+    @Published private(set) var authenticationNotice: AppNotice?
     @Published private(set) var resumeImportError: String?
     @Published private(set) var resumeImportStage: ResumeImportStage = .readingDocument
     @Published private(set) var verifiedWorkEmail: String
@@ -67,7 +76,13 @@ final class AppStore: ObservableObject {
         self.markCache = markCache ?? CompanyMarkDiskCache()
         self.notificationCenter = notificationCenter ?? (SystemNotificationCenterClient() as any NotificationCenterClient)
         self.phase = resolvedBackend.isLive ? .searching : startPhase
-        self.hasAuthenticated = hasAuthenticated ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.authenticationKey))
+        let resolvedHasAuthenticated = hasAuthenticated ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.authenticationKey))
+        self.hasAuthenticated = resolvedHasAuthenticated
+        if resolvedBackend.isLive, hasAuthenticated == nil {
+            self.sessionGateState = .restoring
+        } else {
+            self.sessionGateState = resolvedHasAuthenticated ? .authenticated : .signedOut
+        }
         self.hasCompletedOnboarding = hasCompletedOnboarding ?? (resolvedBackend.isLive ? false : defaults.bool(forKey: Self.onboardingKey))
         self.verifiedWorkEmail = usesMockBackend ? "alex@orbitsystems.com" : ""
         self.connections = seedMockData && usesMockBackend ? MockData.bootstrap.connections : []
@@ -143,6 +158,18 @@ final class AppStore: ObservableObject {
             self.phase = .searching
         }
         #endif
+        if usesMockBackend {
+            self.sessionGateState = self.hasAuthenticated ? .authenticated : .signedOut
+        }
+        #if DEBUG
+        if launchArguments.contains("--session-restoring-preview") {
+            self.sessionGateState = .restoring
+            self.hasAuthenticated = false
+        } else if launchArguments.contains("--session-unavailable-preview") {
+            self.sessionGateState = .unavailable
+            self.hasAuthenticated = false
+        }
+        #endif
         reloadMemberMemory()
     }
 
@@ -167,17 +194,42 @@ final class AppStore: ObservableObject {
     }
 
     func restoreBackendSession() async {
-        guard backend.isLive else { return }
-        guard await backend.hasValidSession() else {
-            hasAuthenticated = false
-            finishSessionRestore()
+        guard backend.isLive else {
+            sessionGateState = hasAuthenticated ? .authenticated : .signedOut
             return
         }
-        hasAuthenticated = true
-        await refreshFromBackend()
-        startBackendUpdates()
-        finishSessionRestore()
-        await syncDeviceRegistration()
+        let wasAuthenticated = hasAuthenticated
+        if !wasAuthenticated { sessionGateState = .restoring }
+        do {
+            guard try await backend.hasValidSession() else {
+                transitionToSignedOut()
+                finishSessionRestore()
+                return
+            }
+            let data = try await backend.bootstrap()
+            applyBackendSnapshot(data)
+            hasAuthenticated = true
+            defaults.set(true, forKey: Self.authenticationKey)
+            sessionGateState = .authenticated
+            startBackendUpdates()
+            finishSessionRestore()
+            await syncDeviceRegistration()
+        } catch {
+            finishSessionRestore()
+            if wasAuthenticated {
+                sessionGateState = .authenticated
+                presentInformation("You’re offline. We’ll refresh when the connection returns.")
+            } else {
+                hasAuthenticated = false
+                sessionGateState = .unavailable
+            }
+        }
+    }
+
+    func retrySessionRestore() {
+        guard sessionGateState == .unavailable else { return }
+        sessionGateState = .restoring
+        Task { await restoreBackendSession() }
     }
 
     /// A tapped notification that arrived before the session was restored is applied, or
@@ -206,24 +258,28 @@ final class AppStore: ObservableObject {
         defer { isRefreshing = false }
         do {
             let data = try await backend.bootstrap()
-            verifiedWorkEmail = data.verifiedWorkEmail
-            member = data.member
-            if let backendIntroduction = data.introduction { introduction = backendIntroduction }
-            conversation = data.conversation
-            connections = data.connections
-            networkingPreferences = data.networkingPreferences
-            meetingPreferences = data.meetingPreferences
-            safetyPreferences = data.safetyPreferences
-            membership = data.membership
-            availability = data.availability
-            hasCompletedOnboarding = data.onboardingComplete
-            reloadMemberMemory()
-            applyIntroductionState(from: data)
-            prefetchCompanyMarks(for: data)
+            applyBackendSnapshot(data)
         } catch {
             // No member action waits on a refresh; foreground refresh remains the recovery path.
             if !silently { presentInformation("Couldn’t refresh right now.") }
         }
+    }
+
+    private func applyBackendSnapshot(_ data: BackendSnapshot) {
+        verifiedWorkEmail = data.verifiedWorkEmail
+        member = data.member
+        if let backendIntroduction = data.introduction { introduction = backendIntroduction }
+        conversation = data.conversation
+        connections = data.connections
+        networkingPreferences = data.networkingPreferences
+        meetingPreferences = data.meetingPreferences
+        safetyPreferences = data.safetyPreferences
+        membership = data.membership
+        availability = data.availability
+        hasCompletedOnboarding = data.onboardingComplete
+        reloadMemberMemory()
+        applyIntroductionState(from: data)
+        prefetchCompanyMarks(for: data)
     }
 
     /// Derives the phase from a snapshot. An introduction the member was waiting on that is no
@@ -328,28 +384,49 @@ final class AppStore: ObservableObject {
     func acceptMagicLinkCallback(_ url: URL) async {
         guard backend.isLive else { return }
         do {
+            authenticationNotice = nil
             try await backend.acceptMagicLinkCallback(url)
             await completeLiveAuthentication(email: nil)
         } catch {
-            presentError(error.localizedDescription)
+            authenticationNotice = AppNotice(
+                kind: .error,
+                text: "We couldn’t verify this link. Check your connection or request a new link."
+            )
         }
+    }
+
+    func dismissAuthenticationNotice(id: UUID) {
+        guard authenticationNotice?.id == id else { return }
+        authenticationNotice = nil
+    }
+
+    func clearAuthenticationNotice() {
+        authenticationNotice = nil
     }
 
     private func completeLiveAuthentication(email: String?) async {
         if let email { verifiedWorkEmail = email }
         if let pendingCompany { member.company = pendingCompany }
-        hasAuthenticated = true
-        defaults.set(true, forKey: Self.authenticationKey)
-        await refreshFromBackend()
-        startBackendUpdates()
-        await registerForRemoteNotificationsIfAllowed()
-        await syncDeviceRegistration()
+        sessionGateState = .restoring
+        do {
+            let data = try await backend.bootstrap()
+            applyBackendSnapshot(data)
+            hasAuthenticated = true
+            defaults.set(true, forKey: Self.authenticationKey)
+            sessionGateState = .authenticated
+            startBackendUpdates()
+            await registerForRemoteNotificationsIfAllowed()
+            await syncDeviceRegistration()
+        } catch {
+            hasAuthenticated = false
+            sessionGateState = .unavailable
+        }
     }
 
     func completeOnboarding() {
         guard !isCompletingOnboarding else { return }
         isCompletingOnboarding = true
-        Task {
+        Task { [self] in
             defer { isCompletingOnboarding = false }
             do {
                 try await backend.saveProfile(member, onboardingComplete: true)
@@ -368,6 +445,7 @@ final class AppStore: ObservableObject {
 
     func completeAuthentication(_ intent: AuthenticationIntent) {
         hasAuthenticated = true
+        sessionGateState = .authenticated
         defaults.set(true, forKey: Self.authenticationKey)
 
         if intent == .signUp {
@@ -396,10 +474,8 @@ final class AppStore: ObservableObject {
         forgetDeviceRegistration()
         pendingNotificationRoute = nil
         messagesPath = []
-        hasAuthenticated = false
-        defaults.set(false, forKey: Self.authenticationKey)
+        transitionToSignedOut()
         selectedTab = .today
-        clearCompanyMarks()
         dismissNotice()
         let backend = self.backend
         signOutTask = Task {
@@ -410,6 +486,33 @@ final class AppStore: ObservableObject {
             // the remote revocation, so its failure raises nothing.
             _ = try? await backend.signOut()
         }
+    }
+
+    private func transitionToSignedOut() {
+        backendUpdatesTask?.cancel()
+        backendUpdatesTask = nil
+        // This key is member-scoped, so remove it before replacing the member with `.empty`.
+        forgetDeviceRegistration()
+        hasAuthenticated = false
+        sessionGateState = .signedOut
+        defaults.set(false, forKey: Self.authenticationKey)
+        hasCompletedOnboarding = false
+        defaults.set(false, forKey: Self.onboardingKey)
+        verifiedWorkEmail = ""
+        member = .empty
+        conversation = nil
+        connections = []
+        networkingPreferences = NetworkingPreferences()
+        meetingPreferences = MeetingPreferences()
+        safetyPreferences = SafetyPreferences()
+        availability = nil
+        membership = .notStarted
+        phase = .searching
+        pendingCompany = nil
+        authenticationNotice = nil
+        pendingNotificationRoute = nil
+        messagesPath = []
+        clearCompanyMarks()
     }
 
     func synchronizeAppStoreTransaction(_ signedTransaction: String) async {
@@ -463,7 +566,7 @@ final class AppStore: ObservableObject {
     /// again with the text as it is at that moment.
     private func saveProfileKeepingEdits() {
         let profile = member
-        Task {
+        Task { [self] in
             do { try await backend.saveProfile(profile, onboardingComplete: true) }
             catch {
                 presentError("Profile changes weren’t saved.") { [weak self] in self?.saveProfileKeepingEdits() }
@@ -568,7 +671,7 @@ final class AppStore: ObservableObject {
     /// details the other member will be told about.
     func planMeetup(detail: String) {
         guard canMessage, let conversationID = conversation?.id else { return }
-        Task {
+        Task { [self] in
             do {
                 try await backend.createMeetup(conversationID: conversationID, detail: detail)
                 guard conversation?.id == conversationID else { return }
@@ -821,13 +924,12 @@ final class AppStore: ObservableObject {
 
     func deleteAccount() {
         if backend.isLive {
-            Task {
+            Task { [self] in
                 do {
                     try await backend.deleteAccount()
                     clearMemberMemory()
                     resetDemo(includeOnboarding: true)
-                    hasAuthenticated = false
-                    defaults.set(false, forKey: Self.authenticationKey)
+                    transitionToSignedOut()
                     dismissNotice()
                 } catch {
                     presentError(error.localizedDescription) { [weak self] in self?.deleteAccount() }
@@ -836,8 +938,7 @@ final class AppStore: ObservableObject {
         } else {
             clearMemberMemory()
             resetDemo(includeOnboarding: true)
-            hasAuthenticated = false
-            defaults.set(false, forKey: Self.authenticationKey)
+            transitionToSignedOut()
             dismissNotice()
         }
     }
