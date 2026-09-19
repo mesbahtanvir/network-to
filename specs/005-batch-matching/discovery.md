@@ -1,11 +1,11 @@
 # Discovery: Batch Matching
 
 **Feature**: `005-batch-matching` (pre-spec discovery; the spec is written after the product owner
-answers section 9)
+section 9)
 
 **Created**: 2026-09-13
 
-**Status**: Discovery. Nothing here changes shipped behaviour. `README.md` and
+**Status**: Discovery with decisions recorded (section 9). Nothing here changes shipped behaviour. `README.md` and
 `docs/SUPABASE_BACKEND.md` continue to describe the current matcher until a feature ships.
 
 **Constitution**: Principles I, II, III, IV (gender), VI, VII, VIII are touched by any change to
@@ -179,7 +179,7 @@ For one city `c` at batch time `t`:
 
 - **Eligible members** `V`: active, onboarding complete, membership access, not paused, no
   active introduction (an `offered` one not passed by them, or a `mutual` one within the
-  window decided under question Q4), and their last introduction older than their cadence
+  window decided in D4), and their last introduction older than their cadence
   window.
 - **Eligible pairs** `E`: both in `V`, not blocked either way, no introduction in 180 days,
   both consents satisfied, meeting overlap (areas with "Flexible within the city" as a
@@ -218,7 +218,7 @@ sentence so the copy says exactly what was rewarded:
   Distributed systems, Developer tools, Product strategy; Product thinking ← Product strategy,
   Go-to-market, Developer tools; Founder perspective ← Fundraising, Go-to-market, Scaling
   teams. "Career transition" and "Local tech ecosystem" have no natural contribution area and
-  need a product decision (question Q3).
+  need a product decision (decision D3).
 - **Shared direction**: overlap of the six networking goals (Jaccard).
 - **Topic affinity**: normalized-token overlap of topics as a weak signal (fixes the worst of
   F4); the upgrade path is text embeddings (section 8).
@@ -227,8 +227,8 @@ sentence so the copy says exactly what was rewarded:
 - **Perspective**: cross-company and cross-industry, as today.
 - **Meeting practicality**: a hard filter, not a score, with the flexible wildcard (F5).
 
-Floor `τ`: reciprocal help above zero in both directions, plus at least one of shared
-direction, topic affinity, or peer fit above a minimum. How strict is question Q5.
+Floor `τ`: reciprocal help above zero in both directions (decision D5). The other
+components rank pairs above the floor; they never admit one.
 
 Explanations ("Why you should meet", "Why they may want to meet you") are assembled from the
 components that fired, in the members' own words: the growth area the reader chose, the
@@ -259,7 +259,7 @@ gap between A and B at the density of a first city.
 expire, then for each city with at least two eligible members compute eligible pairs and
 weights into a temporary table in one pass, apply the floor, select greedily in weight order
 with each member used at most once, insert introductions and events, and record per-city
-diagnostics. The schedule changes from hourly to the cadence decided under Q1 (per-city local
+diagnostics. The schedule changes from hourly to the cadence decided in D1 (per-city local
 time needs a small city registry with a time zone, or a single UTC hour to start). No new
 secret, no new function, no client change. The `generate-introductions` operations function
 keeps working by calling the batch.
@@ -288,8 +288,8 @@ Data changes under any option:
 - `introductions.matching_run_id` (nullable) for traceability. Relevance components stay in the
   private schema if kept at all; nothing resembling a score is ever readable by a client.
 - A `private.introduction_is_active(introduction, member, now)` helper that gives `mutual` a
-  bound (F2), decided under Q4.
-- Cadence semantics for `exceptional_only` (F8), decided under Q6.
+  bound (F2), decided in D4.
+- Cadence semantics for `exceptional_only` (F8), decided in D6.
 
 Tests: pgTAP for each rule (one introduction per member per batch, higher weight wins, the
 floor is never crossed, wait raises priority without crossing the floor, cadence, blocks, the
@@ -322,55 +322,43 @@ Would need an amendment first:
   displayed scores are), but it is a new use of private data and belongs in the constitution
   and the member-facing privacy labels before it ships.
 
-## 9. Open questions for the product owner
+## 9. Decisions (product owner, 2026-09-19)
 
-Each question names the default the spec will assume if unanswered.
+Every question in the first version of this document was answered by the product owner on
+2026-09-19; the decisions below are what the spec is written from.
 
-- **Q1. Batch timing.** Keep hourly, or one batch per city per day at a fixed local morning
-  hour, or weekly? Default: daily at about 9 a.m. local, starting with one UTC hour for
-  Toronto and a city time-zone registry when a second city has members. A member who passes
-  is eligible again at the next batch, subject to their cadence.
-- **Q2. Scale.** How many members do you expect in Toronto at launch and in a year, and how
-  many cities? Default: at most a few thousand eligible members per city per batch, which
-  keeps Option 1 comfortable.
-- **Q3. Vocabulary.** Fix F1 with (a) a product-owned affinity table between the existing
-  lists (backend only, immediate), (b) one shared taxonomy for growth and contribution areas
-  in onboarding and profile editing (client change, data migration, résumé schema change), or
-  (c) both, (a) now and (b) as its own feature? What should "Career transition" and "Local
-  tech ecosystem" be served by? Default: (c), with the draft mapping in section 5 for you to
-  edit.
-- **Q4. After mutual interest.** How long should a mutual introduction count as a member's
-  active introduction: until its seven-day expiry, until the conversation ends or feedback is
-  recorded, or until the meetup happens? Default: until its expiry, so a member in a live
-  conversation may receive their next introduction after a week, still subject to cadence.
-- **Q5. Floor strictness at low density.** Require reciprocal help in both directions (fewer
-  introductions, longer waits for early members) or accept one direction plus shared
-  direction? Default: both directions, because the constitution prefers nothing over a weak
-  introduction; the diagnostics will show how long members wait.
-- **Q6. Exceptional only.** A higher floor whenever such a pair appears, a 90-day spacing as
-  today, or both? Default: a higher floor with a 28-day minimum spacing.
-- **Q7. Fairness.** Should waiting time raise a member's priority within the floor, so nobody
-  waits indefinitely while others are introduced repeatedly? Default: yes, bounded, never
-  crossing the floor.
-- **Q8. Learning from outcomes.** May matching privately use Pass history and meetup
-  feedback later (for example, avoid re-proposing a pattern a member keeps passing on)?
-  Default: not in this feature; record diagnostics now and decide with data and a
-  constitution amendment.
-- **Q9. AI.** Keep explanations deterministic from the members' own words (no amendment),
-  allow the built-in embedding model for topic and ambition affinity (MINOR amendment), or
-  allow LLM-drafted explanations (amendment plus privacy disclosure)? Default: deterministic
-  now, embeddings as the recorded upgrade path, no LLM drafting.
-- **Q10. Available today.** Include the same-day path in this feature (a more frequent
-  selection over members with a live availability in the same area and window, same floor), or
-  a follow-up? Default: follow-up, designed so the same selection runs over the availability
-  subgraph.
-- **Q11. Unused preferences.** Use `relationship_mix` and `years_experience` as the peer-fit
-  component, or remove `relationship_mix` from the UI since it has one value? Default: use
-  them.
+- **D1. Batch timing.** One batch per city per day at about nine in the morning local time.
+  Until a second city has members, one fixed UTC hour for Toronto; a city time-zone registry
+  follows when needed. A member who passes is eligible again at the next batch, subject to
+  their cadence. The hourly schedule is retired.
+- **D2. Scale.** At most a few thousand eligible members per city per batch over the next
+  year. Postgres-only batch with greedy selection, built behind the two-RPC seam (weighted
+  pairs out, chosen pairs in) so an exact solver can replace selection later.
+- **D3. Vocabulary.** A product-owned affinity table between the existing growth areas and
+  contribution areas ships in this feature, backend only. Replacing both lists with one shared
+  taxonomy in onboarding, profile editing, and the résumé drafter is its own later feature.
+  "Career transition" and "Local tech ecosystem" are mapped in the table with the product
+  owner's edits before the migration lands.
+- **D4. After mutual interest.** A mutual introduction counts as a member's active
+  introduction until its seven-day expiry. A member in a live conversation may receive their
+  next introduction after that, still subject to cadence.
+- **D5. Floor strictness.** Reciprocal help is required in both directions. Early members may
+  wait; the diagnostics show how long.
+- **D6. Exceptional only.** A higher floor and at most one introduction every 28 days.
+- **D7. Fairness.** Waiting time raises priority within the floor, bounded, never crossing it.
+- **D8. Learning from outcomes.** Not in this feature. Diagnostics are recorded now; any use
+  of Pass history or meetup feedback in ranking needs its own constitution amendment.
+- **D9. AI.** Explanations are deterministic, assembled from the members' own words and the
+  components that fired. No amendment. Embeddings are the recorded upgrade path for topic and
+  ambition affinity, behind the same relevance interface.
+- **D10. Available today.** A follow-up feature. The batch is designed so the same selection
+  can run over the availability subgraph later.
+- **D11. Unused preferences.** Experience band distance, read through relationship mix, becomes
+  the peer-fit component.
 
 ## 10. Sequence after the answers
 
-1. `/speckit-specify` for `005-batch-matching` from this discovery and the answers, including
+1. `/speckit-specify` for `005-batch-matching` from this discovery and the decisions, including
    the Calm Technology check and the retention rule for `matching_run_cities`.
 2. `/speckit-clarify` for anything still open, `/speckit-plan`, `/speckit-tasks`.
 3. Implement as one migration per concern (affinity registry; batch selection and
