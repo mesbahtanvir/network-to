@@ -157,6 +157,14 @@ the blocks primary key) cover the eligibility and repeat checks.
 **Rejected**: per-pair helper function calls for the floor (millions of function calls);
 top-k sparsification (not needed at decision D2's scale; noted as the next step if it is).
 
+**Measured** (local Postgres 16 harness, synthetic city of 2,000 eligible members with
+five growth and five contribution areas each): the candidate-pair query produced 1,999,000
+pairs (934,901 above the floor) in 72 seconds, and the whole batch, including the greedy
+pass and the commit of 963 introductions, completed in 2 minutes 49 seconds. A first
+version that called `private.growth_service` and `private.users_blocked` per pair did not
+finish in ten minutes, which is why the pair query uses anti-joins for blocks and repeats
+and array overlap for the floor, and calls `growth_service` only in single-pair mode.
+
 ## 9. Determinism and tests
 
 **Decision**: no `random()` anywhere; ties break by weight, then the greater of the two wait

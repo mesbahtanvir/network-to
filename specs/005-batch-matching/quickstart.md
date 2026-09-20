@@ -13,10 +13,16 @@ files prove nothing else regressed.
 
 ## Backend, without Docker
 
-Build a throwaway Postgres cluster with pgTAP and stub `auth`, `cron`, `net`, and `vault`
-objects, apply `supabase/migrations/*.sql` in order, then run each `supabase/tests/database/*.test.sql`
-with `pg_prove` or `psql`. If the environment cannot provide pgTAP or the stubs, the pull
-request description records that the workflow is the proof (Principle VII).
+A throwaway Postgres 16 cluster with pgTAP (`postgresql-16-pgtap`, `pg_prove`) and stub packages
+for `pg_cron`, `pg_net`, and `supabase_vault` (fake extension control files whose scripts create
+`cron.job`, `cron.schedule`, `cron.unschedule`, `net.http_post`, `vault.secrets`,
+`vault.decrypted_secrets`, `vault.create_secret`), plus `auth.users`, `auth.uid()`,
+`auth.role()`, `storage.buckets`, `storage.objects`, `storage.foldername`, the roles `anon`,
+`authenticated`, `service_role`, `supabase_auth_admin`, an `extensions` schema, and the
+`supabase_realtime` publication. Each migration is applied with `psql -1` (one transaction, as
+the CLI does), then `seed.sql`, then `pg_prove --ext .sql supabase/tests/database/`. This is what
+validated feature 005 in the authoring environment; the workflow's validate job remains the
+proof of record for the pull request.
 
 ## Scenario checks (SQL, local or staging)
 

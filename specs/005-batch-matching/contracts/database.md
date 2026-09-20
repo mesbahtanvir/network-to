@@ -12,9 +12,9 @@ that no operator step exists.
 - `create table private.growth_contribution_affinity (...)` as in data-model.md; `revoke all`
   from `public`, `anon`, `authenticated`.
 - Seed with `insert ... on conflict do nothing` (re-runnable).
-- `private.growth_service(p_growth text[], p_contribution text[])
-  returns table (same_count integer, adjacent_count integer, served_growth_area text, serving_contribution_area text)`:
-  `language sql stable`. For each growth area (in order) the best serving contribution area
+- `private.growth_service(p_growth text[], p_contribution text[]) returns private.growth_service_result`
+  (a composite of `same_count`, `adjacent_count`, `served_growth_area`, `serving_contribution_area`):
+  `language sql stable security definer`, so a pair query can guard the call with a CASE. For each growth area (in order) the best serving contribution area
   (identity → `same`; registry row → its strength); counts by strength; the explained pair
   per data-model.md. Empty or null arrays return zeros and nulls.
 
@@ -27,9 +27,10 @@ no operator step.
 
 ```sql
 alter table public.introductions
-  add column reciprocal_for_a text not null default '',
-  add column reciprocal_for_b text not null default '',
-  add column matching_run_id uuid;
+  add column if not exists reciprocal_for_a text not null default '',
+  add column if not exists reciprocal_for_b text not null default '',
+  add column if not exists matching_run_id uuid;
+-- and private.matching_runs.requested_limit is re-bounded to 1..5000 (it is now a per-city cap)
 update public.introductions set reciprocal_for_a = reason_for_b, reciprocal_for_b = reason_for_a
   where reciprocal_for_a = '' and reciprocal_for_b = '';
 ```
@@ -53,14 +54,15 @@ As in data-model.md, with `references private.matching_runs(id) on delete cascad
 
 | Function | Returns | Behaviour |
 |----------|---------|-----------|
-| `private.matching_eligible_members(p_now timestamptz)` | table of member rows with the derived fields in data-model.md | eligibility rules 1 to 5 |
-| `private.matching_candidate_pairs(p_city_key text, p_now timestamptz)` | table `(member_a, member_b, meets boolean, above_floor boolean, weight numeric, fit components, explanation inputs)` | pair rules 1 to 3 always; flags for 4 to 6; weight only when `above_floor`. The "candidates out" seam |
-| `private.matching_pair_is_valid(p_a uuid, p_b uuid, p_now timestamptz)` | boolean | both eligible, same city, pair rules 1 to 6, re-evaluated from the tables |
-| `private.select_matching_pairs(p_city_key text, p_now timestamptz, p_limit integer)` | table `(member_a, member_b, weight numeric)` | greedy over `matching_candidate_pairs` where `above_floor`, ordered `weight desc, greatest(wait_a, wait_b) desc, member_a, member_b`, each member at most once, at most `p_limit` pairs |
-| `private.compose_introduction_copy(p_a uuid, p_b uuid, ...)` | record `(reason_for_a, reason_for_b, reciprocal_for_a, reciprocal_for_b, meeting_context)` | contracts/copy.md |
-| `private.commit_matching_pairs(p_run_id uuid, p_city_key text, p_pairs jsonb, p_now timestamptz)` | table `(created integer, dropped integer, total_weight numeric)` | for each `{"a": uuid, "b": uuid, "weight": n}`: skip unless `matching_pair_is_valid` and neither member already introduced in this run; insert the introduction with `matching_run_id`, two `introduction_ready` events (`{"introduction_id": ...}`); the active-pair unique index is the last guard. The "chosen pairs in" seam |
-| `private.run_matching_batch(p_limit integer)` | integer | `p_limit` between 1 and 5000 is the per-city cap; advisory lock else `skipped`; expire `offered` past expiry; for each city with at least one eligible member: candidates, selection, commit, one `matching_run_cities` row; run `completed` with the total, or `failed` with the message; never raises |
-| `public.run_matching_now()` | jsonb `{"run_id", "status", "introductions_created"}` | raises unless `auth.role() = 'service_role'`; calls `private.run_matching_batch(1000)`. Execute revoked from `public`, `anon`, `authenticated`; granted to `service_role` |
+| `private.matching_eligible_members(p_now timestamptz, p_member uuid default null)` | table of member rows with the derived fields in data-model.md | eligibility rules 1 to 5; with `p_member` only that member is evaluated |
+| `private.matching_candidate_pairs(p_city_key text, p_now timestamptz, p_member_a uuid default null, p_member_b uuid default null)` | table `(member_a, member_b, stage smallint, weight numeric, same_to_a, adjacent_to_a, same_to_b, adjacent_to_b, goal_jaccard, shared_topics, band_distance, crosses_company, crosses_industry, served_growth_a, serving_contribution_b, served_growth_b, serving_contribution_a, wait_a, wait_b)` | every pair of eligible members in the city with its stage: 0 excluded by rules 1 to 3, 1 no meeting overlap, 2 below the floor, 3 above it; weight and explanation inputs only at stage 3. With both members set, only that pair, which is how commit re-validates. The "candidates out" seam |
+| `private.matching_pair_is_valid(p_a uuid, p_b uuid, p_now timestamptz)` | boolean | the pair reaches stage 3 when re-evaluated from the tables |
+| `private.select_matching_pairs(p_city_key text, p_now timestamptz, p_limit integer)` | table `(member_a, member_b, weight numeric)` | materializes the city's stage-3 pairs in `pg_temp.matching_batch_pairs`, then greedy in `weight desc, greatest(wait_a, wait_b) desc, member_a, member_b` order, each member at most once, at most `p_limit` pairs, no `random()` |
+| `private.compose_introduction_copy(p_a uuid, p_b uuid, p_served_growth_a text, p_serving_contribution_b text, p_served_growth_b text, p_serving_contribution_a text)` | table `(reason_for_a, reason_for_b, reciprocal_for_a, reciprocal_for_b, meeting_context)` | reads names, help formats, words, ambitions, and meeting preferences from the tables; contracts/copy.md |
+| `private.commit_matching_pairs(p_run_id uuid, p_city_key text, p_pairs jsonb, p_now timestamptz)` | table `(created integer, dropped integer, total_weight numeric)` | for each `{"a": uuid, "b": uuid, "weight": n}`: re-evaluate the pair through `matching_candidate_pairs`; drop it unless it is at stage 3 (a member already introduced in this run is no longer eligible, so the pair drops); insert the introduction with `matching_run_id` and the composed copy, plus two `introduction_ready` events (`{"introduction_id": ...}`); the active-pair unique index is the last guard. The "chosen pairs in" seam |
+| `private.execute_matching_batch(p_limit integer)` | table `(run_id, status, introductions_created)` | `p_limit` between 1 and 5000 is the per-city cap; advisory lock else `skipped`; expire `offered` past expiry; for each city with at least one eligible member: one pass over `matching_candidate_pairs` for each member's furthest stage, then selection, commit, and one `matching_run_cities` row; run `completed` with the total or `failed` with the message; never raises. Run timestamps use `clock_timestamp()` |
+| `private.run_matching_batch(p_limit integer default 1000)` | integer | calls `execute_matching_batch` and returns the count; the cron entry point, signature unchanged |
+| `public.run_matching_now()` | jsonb `{"run_id", "status", "introductions_created"}` | raises unless `auth.role()` is `service_role`; calls `private.execute_matching_batch(1000)`. Execute revoked from `public`, `anon`, `authenticated`; granted to `service_role` |
 
 Dropped: `public.generate_next_introduction()`, `private.generate_one_introduction()`.
 
@@ -110,6 +112,10 @@ per scenario; an Austin member; introductions inserted with chosen `created_at` 
 `expires_at`. Runs `private.run_matching_batch(1000)` and asserts the plan's test list.
 Two-run determinism through `savepoint` / `rollback to savepoint`.
 
-Adjusted files: `schema.test.sql` (daily job present once, hourly absent, new functions
-exist), `production_behavior.test.sql` and `introduction_privacy.test.sql` (call the batch),
-`launch_operations.test.sql` (retention cascade), `company_marks.test.sql` (five jobs).
+Adjusted files: `schema.test.sql` (daily job present once, hourly absent, the old functions
+gone, new tables and functions exist), `production_behavior.test.sql` and
+`introduction_privacy.test.sql` (call the batch). `launch_operations.test.sql` and
+`company_marks.test.sql` pass unchanged; the retention cascade is proven in the new file.
+Scenarios are separated by pausing every member so far rather than by savepoints, which
+would roll back pgTAP's own bookkeeping; the skipped-run path cannot be exercised from one
+session because advisory locks are re-entrant.

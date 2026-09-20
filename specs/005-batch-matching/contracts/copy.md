@@ -39,9 +39,12 @@ organizations.”*
 You are both in the same city and prefer {format} around {area}. Confirm a public place together after mutual interest.
 ```
 
-`format` and `area` are the first shared values in member A's order; when the overlap is
-only through "Flexible within the city", `area` is the other member's first area, or
-"Flexible within the city" when both are flexible.
+`format` is the first shared format in member A's order, lower-cased on its first letter.
+`area` is the first shared area in member A's order other than "Flexible within the city";
+when the overlap is only through one member's flexibility, it is the first area of the member
+who is not flexible. When both are flexible the sentence reads "You are both in the same city
+and prefer {format} and are flexible about where in the city. Confirm a public place together
+after mutual interest." When the members share no format, `format` falls back to "a coffee".
 
 ## Rules checked by pgTAP
 

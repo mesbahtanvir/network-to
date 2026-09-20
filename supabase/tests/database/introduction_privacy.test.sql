@@ -93,7 +93,7 @@ select is((select count(*) from public.notification_events where kind = 'mutual_
 select is((select count(*) from public.conversations), 0::bigint, 'no conversation is created');
 
 -- Matching: the member who passed is free again; the waiting member is not.
-select lives_ok($$select private.generate_one_introduction()$$, 'matching runs with an open, passed-on introduction present');
+select lives_ok($$select private.run_matching_batch(1000)$$, 'matching runs with an open, passed-on introduction present');
 select is(
   (select count(*) from public.introductions
    where member_a = '10000000-0000-0000-0000-000000000001' and member_b = '30000000-0000-0000-0000-000000000003'),
