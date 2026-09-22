@@ -38,6 +38,7 @@ The migrations create:
 
 - the verified company registry: one `companies` row per company (display name, industry, website, coverage clause, approval status, and the served company mark) with one or more `company_domains` rows per company, plus private member profiles
 - professional history, career direction, growth goals, contributions, and matching preferences
+- the product-owned affinity registry between growth areas and contribution areas, read only by matching, in the private schema
 - selective introductions and private per-member responses
 - conversations and messages created only after reciprocal interest
 - meetup plans, private feedback, and member-owned connections
@@ -57,7 +58,7 @@ High-impact transitions use `security definer` database functions with an empty 
 - `send_message` verifies conversation participation and uses a client-generated UUID so retries cannot create duplicate messages.
 - `create_meetup` and the feedback functions enforce conversation participation.
 - `block_member`, `end_conversation`, and `submit_member_report` validate an existing relationship before changing state.
-- The private matching job first limits candidates to the same normalized city, then requires reciprocal professional relevance and overlapping meeting preferences while respecting each member's exact cadence, blocks, pauses, repeat-introduction constraints, and one active introduction per member (an introduction a member passed on no longer counts as theirs). Cross-company and cross-industry introductions receive a ranking bonus.
+- The private daily matching batch considers every eligible member of a city together (see Matching below). A pair is introduced only when each member's contribution areas serve at least one of the other's growth areas, with overlapping meeting preferences, while respecting each member's exact cadence, blocks, pauses, the 180-day no-repeat rule, and one active introduction per member (an introduction a member passed on no longer counts as theirs, and a mutual introduction counts only until its expiry). Cross-company and cross-industry pairs receive a small fit bonus.
 - Matching requires both members to have an active free month or verified subscription. Expiry pauses only future matching; conversations and connections remain accessible.
 
 ## Authentication
@@ -82,14 +83,14 @@ Local hook and email-template settings live in `supabase/config.toml`. For a hos
 
 ## Scheduled work and Edge Functions
 
-- Postgres schedules five jobs through `pg_cron`: `private.run_matching_batch(25)` hourly at minute 7, `private.run_meetup_followups()` hourly at minute 37, `private.dispatch_notification_delivery()` every minute, `private.run_operations_alerts()` every 15 minutes, and `private.run_retention_maintenance()` daily at 04:15 UTC. Matching outcomes are recorded in `private.matching_runs` for operations review.
+- Postgres schedules five jobs through `pg_cron`: `private.run_matching_batch(1000)` daily at 13:07 UTC (9:07 in Toronto during daylight time; the argument is a per-city cap, never a target), `private.run_meetup_followups()` hourly at minute 37, `private.dispatch_notification_delivery()` every minute, `private.run_operations_alerts()` every 15 minutes, and `private.run_retention_maintenance()` daily at 04:15 UTC. Matching outcomes are recorded in `private.matching_runs` and, per city, in `private.matching_run_cities` for operations review.
 - `auth-handoff`: completes the HTTPS callback server-side, clears its secrets from the browser URL, and relays a single-use PKCE authorization code from a work laptop to the originating iPhone. Its confirmation is intentionally plain text because Supabase Edge Functions rewrite HTML responses as `text/plain`.
 - `delete-account`: verifies the caller, deletes private résumé objects, then deletes the Auth user so database rows cascade. Any failure is recorded as an operational incident.
 - `process-resume`: authenticates the member, enforces a durable per-account quota, sends bounded text extracted and contact-redacted on the iPhone to the DeepSeek Responses API, and returns a schema-constrained factual draft for review.
 - `sync-subscription`: authenticates the member, verifies StoreKit 2 signed transaction data against Apple’s certificate chain, bundle ID, product ID, expiry, and account token, then records access through a service-role-only database function.
 - `deliver-notifications`: called by the database schedule with `NOTIFICATION_JOB_SECRET`. It claims due notification events for members with a registered device, sends each through APNs with a token-based (ES256) provider key, retires tokens Apple reports as unregistered, and records every outcome on the event. Requires `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` (the `.p8` contents; escaped newlines are accepted); `APNS_BUNDLE_ID` overrides the default topic.
 - `app-store-notifications`: receives App Store Server Notifications v2, verifies Apple's signature for the claimed environment, maps the notification to a membership state, and records it through an idempotent, order-aware database function.
-- `generate-introductions`: an optional manual operations endpoint protected by `MATCHING_JOB_SECRET`; it is not required for the scheduled production path and does not need to be deployed by default.
+- `generate-introductions`: an optional manual operations endpoint protected by `MATCHING_JOB_SECRET`. It calls `public.run_matching_now()` as the service role, which runs the same daily batch under the same lock, and returns the run's id, status, and number of introductions created. It is not required for the scheduled production path and does not need to be deployed by default.
 - `company-marks`: the operations action for company marks, protected by `COMPANY_MARKS_JOB_SECRET`. `populate` fetches each approved company's own published icon (from the website on its registry entry, following only that site's redirects, never an icon service), keeps the largest still PNG or JPEG of at least 128 px and at most 1 MiB, stores it as `company-marks/<key>/<version>.<png|jpg>`, and records an outcome per company (`fetched`, `no_icon_published`, `fetch_failed` with a reason). It processes ten companies per invocation and continues itself until the registry is covered; a second start while a run is running records `skipped`. `refresh` re-fetches named companies as a new version, `status` returns the whole registry's mark state, and `purge` deletes the files of versions retired more than 30 days ago (also triggered by the daily retention job).
 
 `auth-handoff` also applies durable, salted IP rate limits. Generate a separate random 256-bit `HANDOFF_RATE_LIMIT_SALT`; never reuse a signing, database, or Apple key.
@@ -104,6 +105,56 @@ select vault.create_secret('<another random 256-bit secret>', 'company_marks_job
 ```
 
 `notification_job_secret` must equal the `NOTIFICATION_JOB_SECRET` function secret and `company_marks_job_secret` must equal `COMPANY_MARKS_JOB_SECRET`. Until `project_url` and `notification_job_secret` exist the dispatcher stays idle, until `ops_alert_webhook_url` exists alerts stay pending, and until `company_marks_job_secret` exists the daily job skips the mark-file purge; nothing fails loudly in a project that has not been configured yet.
+
+## Matching
+
+Matching runs as one batch per city per day. For each city it takes every eligible member
+(active, onboarding complete, an active free month or verified subscription, not paused, no
+active introduction, and past their cadence spacing since their most recent introduction),
+considers every pair, and introduces a set of pairs in which each member appears at most once.
+
+A pair clears the quality floor only when each member's contribution areas serve at least one
+of the other member's growth areas. Serving means an identical term or a pair listed in
+`private.growth_contribution_affinity`, the product-owned registry between the growth areas a
+member can choose and the contribution areas that serve them (`same` or `adjacent`). The
+registry changes only by a migration as a product decision; identical terms always serve
+whether or not a row exists. A member whose frequency is "Exceptional introductions only"
+needs a `same` term in each direction, a shared networking goal, and at least 28 days since
+their last introduction. A pair also needs a shared meeting format and window and a shared
+area, with "Flexible within the city" overlapping any area. Blocks, the 180-day no-repeat rule,
+and both members' cross-company and cross-industry consents are hard rules.
+
+Above the floor, a pair's fit adds how many growth areas are served in each direction (a
+`same` term counts more than an `adjacent` one, capped per direction), the overlap of
+networking goals, professional topics that are identical after normalizing case, spacing, and
+punctuation, how close the two experience bands are, and whether the pair crosses companies
+and industries. Each member's waiting time since their most recent introduction (or since
+onboarding completion) adds a bounded bonus that can reorder comparable pairs but never
+outweighs a clearly stronger fit and never admits a pair below the floor. Pairs are chosen
+greedily by weight (ties broken by the longer wait, then member identifiers, so a run is
+deterministic), then re-validated one by one from the tables as the introductions are created.
+Nothing resembling a score is stored where a member can read it.
+
+Each introduction carries two explanations per member, written to that member: "Why you
+should meet" names one of the reader's growth areas, the other member's contribution area that
+serves it, the other member's own words about what they can share, and their own ambition;
+"Why they may want to meet you" names the other member's growth area and the reader's serving
+contribution area in the reader's own words. Empty free text drops its sentence. The meeting
+context names a shared format and area.
+
+Every run is recorded in `private.matching_runs`; every city in a run gets one row in
+`private.matching_run_cities` with counts only: eligible members, members unmatched by reason
+(no other eligible member in the city, every candidate excluded by a block, a repeat, or a
+consent, no meeting overlap, no pair above the floor, every partner taken by another pair),
+pairs above the floor, pairs dropped at re-validation, introductions created, and the total
+weight. Both are purged after 180 days. The median days from onboarding completion to first
+introduction and the share of members with none after seven days can be computed from
+`private.memberships` (`trial_started_at`) and `public.introductions` (`created_at`) alone.
+
+Selection is a private seam: `private.matching_candidate_pairs` returns a city's pairs with
+their stage and weight, `private.select_matching_pairs` chooses greedily, and
+`private.commit_matching_pairs` re-validates and creates. A stronger selector can replace the
+middle step without changing eligibility, explanations, or records.
 
 ## Company marks
 
@@ -191,7 +242,7 @@ Set `DEEPSEEK_API_KEY` as a Supabase function secret to enable live drafting. `D
 
 Already implemented:
 
-- Fifteen migrations, RLS, private schemas, transactional profile writes, idempotent messages, account-scoped trials, same-city subscription-aware matching schedules, meetup follow-ups, notification delivery bookkeeping, App Store Server Notification handling, retention, and Edge Function abuse controls.
+- Seventeen migrations, RLS, private schemas, transactional profile writes, idempotent messages, account-scoped trials, a same-city subscription-aware daily matching batch with a product-owned affinity registry and per-city run records, meetup follow-ups, notification delivery bookkeeping, App Store Server Notification handling, retention, and Edge Function abuse controls.
 - Hosted `auth-handoff`, `delete-account`, `process-resume`, and `sync-subscription` functions, plus a live cross-device handoff smoke test.
 - `deliver-notifications` and `app-store-notifications` functions, driven by the database schedule and Apple respectively, each authenticating its own caller.
 - Operations alerts for failed or stalled matching, repeated notification delivery failures, App Store notifications that could not be applied, new member reports, and account-deletion failures, posted once each to a Vault-configured webhook.

@@ -1,5 +1,5 @@
 begin;
-select plan(64);
+select plan(73);
 
 insert into public.company_domains (domain, company_name, industry, status)
 values ('shopify.com', 'Shopify', 'Commerce technology', 'approved')
@@ -14,6 +14,8 @@ select has_table('public', 'blocks', 'blocks table exists');
 select has_table('public', 'resume_documents', 'private resume records table exists');
 select has_table('private', 'auth_handoffs', 'cross-device auth handoffs are stored outside the Data API');
 select has_table('private', 'matching_runs', 'matching executions have a private operational audit trail');
+select has_table('private', 'matching_run_cities', 'each matching run records per-city counts');
+select has_table('private', 'growth_contribution_affinity', 'the growth and contribution registry is product data outside the Data API');
 select has_table('private', 'edge_rate_limits', 'public pre-session endpoints have durable abuse controls');
 select has_table('private', 'memberships', 'membership billing state stays outside the Data API');
 select has_column('public', 'profiles', 'professional_ambition', 'professional direction is first-class profile data');
@@ -34,6 +36,9 @@ select has_function('public', 'send_message', array['uuid', 'uuid', 'text'], 'me
 select has_function('public', 'get_safety_preferences', array[]::text[], 'blocked-member state has a scoped read model');
 select has_function('public', 'register_device_token', array['text', 'text'], 'APNs device registration has a validated server transition');
 select has_function('private', 'run_matching_batch', array['integer'], 'matching can run in bounded scheduled batches');
+select has_function('private', 'matching_candidate_pairs', array['text', 'timestamp with time zone', 'uuid', 'uuid'], 'candidate pairs are computed behind a private seam');
+select has_function('private', 'commit_matching_pairs', array['uuid', 'text', 'jsonb', 'timestamp with time zone'], 'chosen pairs are committed behind a private seam');
+select has_column('public', 'introductions', 'reciprocal_for_a', 'each member gets their own reciprocal explanation');
 select has_function('public', 'consume_edge_rate_limit', array['text', 'text', 'integer', 'integer'], 'edge functions share an atomic rate limiter');
 select isnt_empty(
   $$select 1 from pg_constraint
@@ -77,13 +82,19 @@ select ok(
   'authenticated members can call their scoped introduction read model'
 );
 select ok(
-  not has_function_privilege('authenticated', 'public.generate_next_introduction()', 'EXECUTE'),
+  not has_function_privilege('authenticated', 'public.run_matching_now()', 'EXECUTE'),
   'clients cannot invoke matching directly'
 );
 select ok(
-  has_function_privilege('service_role', 'public.generate_next_introduction()', 'EXECUTE'),
-  'only the trusted matching job can invoke matching'
+  not has_function_privilege('anon', 'public.run_matching_now()', 'EXECUTE'),
+  'anonymous clients cannot invoke matching'
 );
+select ok(
+  has_function_privilege('service_role', 'public.run_matching_now()', 'EXECUTE'),
+  'only the trusted operations path can invoke matching on demand'
+);
+select hasnt_function('public', 'generate_next_introduction', array[]::text[], 'the single-pair matching entry point is gone');
+select hasnt_function('private', 'generate_one_introduction', array[]::text[], 'the single-pair selection is gone');
 select ok(
   has_function_privilege('authenticated', 'public.register_device_token(text,text)', 'EXECUTE'),
   'authenticated members can invoke the validated device registration RPC'
@@ -117,9 +128,14 @@ select ok(
   'only trusted verification can record App Store access'
 );
 select is(
-  (select count(*) from cron.job where jobname = 'network-to-hourly-matching'),
+  (select count(*) from cron.job where jobname = 'network-to-daily-matching'),
   1::bigint,
-  'hourly matching is scheduled exactly once'
+  'daily matching is scheduled exactly once'
+);
+select is(
+  (select count(*) from cron.job where jobname = 'network-to-hourly-matching'),
+  0::bigint,
+  'the hourly matching job is retired'
 );
 select is(
   (select count(*) from cron.job where jobname = 'network-to-daily-maintenance'),

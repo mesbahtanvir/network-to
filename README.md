@@ -10,6 +10,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - Résumé-first professional onboarding with real processing stages, item-by-item removal, and member-authored career direction
 - Today, Connections, Messages, and Profile experiences
 - Private Interested/Pass decisions and a mutual-interest conversation gate; a Pass changes nothing the other member can see, and their introduction ends only at its expiry
+- One daily matching batch per city that introduces only pairs in which each member can help the other (through a product-owned registry between growth areas and contribution areas), prefers members who have waited longer when fit is comparable, explains each introduction in the members' own words, and records per-city counts for operations
 - 1:1 meetup planning, private feedback, and opt-in connection creation
 - Temporary coarse-grained availability
 - Reporting, blocking, ending conversations, and account deletion
@@ -17,7 +18,7 @@ The product is intentionally centered on selective same-city introductions, reci
 - One account-scoped free month, followed by a native Apple monthly membership
 - No gender collection, gender filters, or gender-based ranking
 - Company marks beside every verified company name (introduction, conversations, Connections, profile), fetched once server-side from each company's own website and served only from the project's own storage, with a company monogram whenever no mark is available; a registry of 249 North American technology companies and employers
-- A production-hardened Supabase backend for Auth, Postgres, RLS, hourly matching, meetup follow-ups, retention, Realtime tables, APNs delivery, App Store Server Notifications, operations alerting, and Edge Functions
+- A production-hardened Supabase backend for Auth, Postgres, RLS, daily batch matching, meetup follow-ups, retention, Realtime tables, APNs delivery, App Store Server Notifications, operations alerting, and Edge Functions
 - Transactional profile setup, retry-safe messaging, and a restart-safe cross-device magic-link flow
 - On-device PDFKit/Vision résumé text extraction with contact-detail redaction and schema-constrained DeepSeek drafting of identity, role context, expertise, history, education, and demonstrated experience through a rate-limited Supabase Edge Function
 - Deterministic mock data for previews and unit tests

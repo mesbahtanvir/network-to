@@ -254,7 +254,7 @@ where id in (
 );
 
 select lives_ok(
-  $$select private.generate_one_introduction()$$,
+  $$select private.run_matching_batch(1000)$$,
   'matching can introduce compatible members in the same normalized city'
 );
 select is(

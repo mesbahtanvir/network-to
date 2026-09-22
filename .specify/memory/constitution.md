@@ -205,7 +205,8 @@ mechanics keeps the product professional.
   or spam: without Vault secrets the dispatcher stays idle and alerts stay pending; missing
   APNs secrets produce a recorded failure that the operations alert surfaces.
 - Retention MUST purge every operational table on schedule (notification events 90 days,
-  matching runs 180 days, edge rate limits 2 days, App Store notification records 400 days,
+  matching runs with their per-city records 180 days, edge rate limits 2 days, App Store
+  notification records 400 days,
   posted alerts 30 days, incidents 180 days, company mark runs 180 days, files of retired
   company mark versions 30 days, expired handoffs and availabilities daily). Every new
   operational table MUST add a rule there with a pgTAP proof.
@@ -312,9 +313,19 @@ attention inside the app, alarms, or performs is working against that purpose.
   `app-store-notifications`, `deliver-notifications`, `company-marks`. Member-authenticated:
   `delete-account`, `process-resume`, `sync-subscription`. `generate-introductions` is an
   operations tool and is not deployed by default.
-- Schedules, all prefixed `network-to-`: matching hourly at :07 (batch 25), meetup follow-ups
-  hourly at :37, notification dispatch every minute, operations alerts every 15 minutes,
-  retention daily at 04:15 UTC.
+- Schedules, all prefixed `network-to-`: matching daily at 13:07 UTC (one batch per city with a
+  per-city cap of 1000, a bound and never a target), meetup follow-ups hourly at :37,
+  notification dispatch every minute, operations alerts every 15 minutes, retention daily at
+  04:15 UTC.
+- Affinity registry: `private.growth_contribution_affinity` lists, for each growth area a
+  member can choose, the contribution areas that serve it (`same` or `adjacent`); an identical
+  term always serves. It is product data changed only by a migration as a product decision.
+  Matching MUST introduce a pair only when each member's contribution areas serve at least one
+  of the other's growth areas, MUST require a `same` term in each direction, a shared
+  networking goal, and 28 days of spacing for a member whose frequency is exceptional only,
+  MUST count a mutual introduction as active only until its expiry, MUST let waiting time raise
+  a member's priority only within the floor, and MUST record per-city counts (never a member's
+  identity or words) for every run.
 - Limits mirror the migration constraints and function bounds: messages 1-2000 characters,
   report notes at most 2000, profile JSON at most 64 KiB with at most 20 experiences, text
   arrays at most 12 items of 120 characters, introductions expire after 7 days, no repeat
@@ -398,6 +409,12 @@ rendering errors with the success glyph and auto-dismissing; availability, prefe
 feedback, and safety saves keeping optimistic state after a failure) were closed in 1.4.0, and
 no SHOULD deviation from Principles V and VIII remains recorded.
 
+Migration plan for 1.6.0 (batch matching, feature 005): the hourly single-pair matcher was
+replaced by the daily per-city batch, the affinity registry was seeded by migration, existing
+introductions were backfilled with a reciprocal explanation equal to the other member's reason
+so their display did not change, and the first daily batch after release applied the new rules
+to everyone eligible at that time. No client change was needed.
+
 1.3.0 (MINOR): `.github/workflows/ios.yml` now runs the unit tests and a Release compile for
 every pull request that touches the app, so Principle VII and the pull request gate require a
 green iOS workflow run instead of a manually recorded Xcode pass; device-only behaviour keeps
@@ -438,4 +455,4 @@ Runtime and setup guidance lives in `README.md`, `docs/SUPABASE_BACKEND.md`,
 `docs/PRODUCT_DEFINITION.md`, and `docs/DESIGN_PHILOSOPHY.md`, which MUST be updated in the
 same PR as any change that alters what they describe.
 
-**Version**: 1.5.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-13
+**Version**: 1.6.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-20
