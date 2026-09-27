@@ -147,12 +147,6 @@ struct AuthenticationView: View {
                     Button("Sign in") { stage = .email(.signIn) }
                         .buttonStyle(NTSecondaryButtonStyle())
                 }
-
-                Text("North American cities · Verified work email · Private by default")
-                    .font(.caption)
-                    .foregroundStyle(NTColor.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Available across North American cities. Work email verification. Private by default.")
             }
             .padding(.horizontal, NTSpacing.lg)
             .padding(.top, NTSpacing.xl)
